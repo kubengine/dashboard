@@ -1,0 +1,43 @@
+// 基础圆点样式（所有状态通用）
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  // 静态状态下默认不透明
+  opacity: 1;
+}
+
+// 闪烁动画样式（按需添加）
+.blink-animation {
+  animation: blink 1.2s infinite ease-in-out;
+}
+
+// 状态颜色映射（贴合 Ant Design 规范）
+.dot-success {
+  background-color: @success-color; // 绿色：创建中/运行中
+}
+.dot-processing {
+  background-color: @processing-color; // 蓝色：处理中
+}
+.dot-warning {
+  background-color: @warning-color; // 黄色：警告
+}
+.dot-error {
+  background-color: @error-color; // 红色：错误
+}
+.dot-default {
+  background-color: @text-color-secondary; // 灰色：默认
+}
+
+// 闪烁核心动画
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
