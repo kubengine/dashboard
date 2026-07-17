@@ -27,7 +27,7 @@ export async function getInitialState() {
 // 布局配置实现登录拦截
 export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) => {
   return {
-    title: 'KubeKylin',
+    title: 'kubengine',
     logo: '/assets/logo.png',
     // 页面切换时检查登录状态
     onPageChange: () => {

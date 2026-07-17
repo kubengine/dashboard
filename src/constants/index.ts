@@ -1,1 +1,1 @@
-export const DEFAULT_NAME = 'KubeKylin';
+export const DEFAULT_NAME = 'kubengine';

@@ -189,9 +189,9 @@ const ArtifactsList: React.FC = () => {
   const copyConfig = (record: any) => {
     var configStr = '';
     if (record.type == 'CHART') {
-      configStr = `helm pull oci://kubekylin.io/${project_name}/${repository_name} --version ${record.extra_attrs.version}`;
+      configStr = `helm pull oci://kubengine.io/${project_name}/${repository_name} --version ${record.extra_attrs.version}`;
     } else {
-      configStr = `ctr i pull kubekylin.io/${project_name}/${repository_name}@${record.digest}`;
+      configStr = `ctr i pull kubengine.io/${project_name}/${repository_name}@${record.digest}`;
     }
     copyToClipboard(configStr)
       .then(() => {

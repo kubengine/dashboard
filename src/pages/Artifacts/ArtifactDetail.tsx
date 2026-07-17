@@ -80,9 +80,9 @@ const ArtifactDetailPage: React.FC = () => {
   const copyConfig = (tag: string) => {
     var configStr = '';
     if (artifactData.type == 'CHART') {
-      configStr = `helm pull oci://kubekylin.io/${project_name}/${repository_name} --version ${tag}`;
+      configStr = `helm pull oci://kubengine.io/${project_name}/${repository_name} --version ${tag}`;
     } else {
-      configStr = `ctr i pull kubekylin.io/${project_name}/${repository_name}:${tag}`;
+      configStr = `ctr i pull kubengine.io/${project_name}/${repository_name}:${tag}`;
     }
     copyToClipboard(configStr)
       .then(() => {

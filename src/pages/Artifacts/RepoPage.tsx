@@ -309,7 +309,7 @@ export const RepoPage: React.FC<RepoProps> = ({
         <Text type="secondary">
           {name == RepoType.Chart
             ? '提示:仅支持标准Helm Chart包格式(.tgz/.tar.gz),请注意调整chart中镜像信息'
-            : '提示：仅支持标准OCI标准镜像,文件名以tar结尾,且镜像name应为kubekylin.io/apps/xxx'}
+            : '提示：仅支持标准OCI标准镜像,文件名以tar结尾,且镜像name应为kubengine.io/apps/xxx'}
         </Text>
       </Modal>
     </Card>
