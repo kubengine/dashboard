@@ -41,6 +41,7 @@ export const FieldHelmConfigModal: React.FC<FieldHelmConfigModalProps> = ({
     { label: 'boolean', value: 'boolean' },
     { label: 'string', value: 'string' },
     { label: 'number', value: 'number' },
+    { label: 'array', value: 'array' },
   ];
 
   const fetchArtifacts = async (current = 1, pageSize = 100) => {

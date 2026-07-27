@@ -64,21 +64,9 @@ const Store: React.FC = () => {
     // 分类筛选
     return app.category.includes(activeCategory);
   });
-  function getFirstMatchedValueFromB(app_name: string): string | null {
-    const B: Record<string, string> = {
-      redis: '/app_logo/redis_logo.png',
-      mysql: '/app_logo/mysql_logo.png',
-      jenkins: '/app_logo/jenkins.png',
-      mongodb: '/app_logo/mongodb_logo.png',
-    };
-    if (!app_name || Object.keys(B).length === 0) return null;
-    const aNameLower = app_name.toLowerCase();
-    for (const bKey of Object.keys(B)) {
-      if (aNameLower.includes(bKey.toLowerCase())) {
-        return B[bKey];
-      }
-    }
-    return null;
+  function getFirstMatchedValueFromB(app_name: string): string {
+    if (!app_name) return '';
+    return `/app_logo/${app_name.toLowerCase()}_logo.png`;
   }
   const get_cover = (app_name: string) => {
     const img_file = getFirstMatchedValueFromB(app_name);
