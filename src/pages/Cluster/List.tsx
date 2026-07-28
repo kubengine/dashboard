@@ -288,14 +288,19 @@ const Cluster: React.FC = () => {
       messages.map(({ type, data }) => {
         if (type == 'receive') {
           if (data.action == 'update_cluster') {
-            const newClusters = [...(clusters || [])];
-            const targetIndex = clusters.findIndex(
-              (item) => item.cluster_id == data.data.cluster_id,
-            );
-            if (targetIndex !== -1) {
-              newClusters[targetIndex] = data.data;
-            }
-            setClusters(newClusters);
+            // 使用函数式更新，避免闭包陈旧用旧数据覆盖最新列表
+            setClusters((prev) => {
+              const newClusters = [...(prev || [])];
+              const targetIndex = newClusters.findIndex(
+                (item) => item.cluster_id == data.data.cluster_id,
+              );
+              if (targetIndex !== -1) {
+                newClusters[targetIndex] = data.data;
+                return newClusters;
+              }
+              // 列表中不存在（例如新部署的集群），交给 refresh_clusters 处理，不覆盖
+              return prev;
+            });
           } else if (data.action == 'refresh_clusters') {
             getCluster();
           }
@@ -335,7 +340,7 @@ const Cluster: React.FC = () => {
         <Table<Cluster>
           dataSource={clusters}
           columns={columns}
-          rowKey="id"
+          rowKey="cluster_id"
           pagination={{
             ...paginationParams, // 绑定受控的分页参数
             showSizeChanger: true,
