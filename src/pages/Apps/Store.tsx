@@ -64,24 +64,20 @@ const Store: React.FC = () => {
     // 分类筛选
     return app.category.includes(activeCategory);
   });
-  function getFirstMatchedValueFromB(app_name: string): string {
-    if (!app_name) return '';
-    return `/app_logo/${app_name.toLowerCase()}_logo.png`;
-  }
-  const get_cover = (app_name: string) => {
-    const img_file = getFirstMatchedValueFromB(app_name);
-    if (img_file != null) {
-      return (
-        <img
-          draggable={false}
-          alt={app_name}
-          src={img_file}
-          style={{ width: '100%', height: 215 }}
-        />
-      );
-    } else {
+  const AppCover: React.FC<{ app_name: string }> = ({ app_name }) => {
+    const [imgError, setImgError] = useState(false);
+    if (!app_name || imgError) {
       return <div style={{ width: '100%', height: 215 }} />;
     }
+    return (
+      <img
+        draggable={false}
+        alt={app_name}
+        src={`/app_logo/${app_name.toLowerCase()}_logo.png`}
+        onError={() => setImgError(true)}
+        style={{ width: '100%', height: 215 }}
+      />
+    );
   };
 
   return (
@@ -124,7 +120,7 @@ const Store: React.FC = () => {
           {filteredApps.map((app) => (
             <Card
               style={{ width: 300, height: 360 }}
-              cover={get_cover(app.name)}
+              cover={<AppCover app_name={app.name} />}
               actions={[
                 <a onClick={() => history.push(`/apps/deploy/${app.app_id}`)}>
                   立即部署

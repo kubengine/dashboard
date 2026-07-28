@@ -29,7 +29,7 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
   const handleSubmit = async () => {
     const [basic, cluster, env] = await Promise.all([
       basicForm.validateFields().catch((error) => {
-        Promise.reject({ form: 'basic', error });
+        return Promise.reject({ form: 'basic', error });
       }),
       clusterForm
         .validateFields()
@@ -94,6 +94,13 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
       fetchArtifacts();
     }
   }, [app]);
+
+  // app 异步加载后同步基础字段值（Ant Design initialValue 仅首次挂载生效）
+  useEffect(() => {
+    if (app.app_id) {
+      basicForm.setFieldsValue({ name: app.name, helm_chart: app.helm_chart });
+    }
+  }, [app, basicForm]);
 
   const basicFields: AppFieldConfig[] = [
     {
