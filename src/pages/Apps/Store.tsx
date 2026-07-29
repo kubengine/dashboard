@@ -2,9 +2,9 @@ import services from '@/services';
 import { App } from '@/services/AppController';
 import {
   AppstoreOutlined,
-  CodeOutlined,
-  ContainerOutlined,
   DatabaseOutlined,
+  MessageOutlined,
+  ToolOutlined,
 } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
 import { history } from '@umijs/max';
@@ -53,8 +53,8 @@ const Store: React.FC = () => {
   const categories = [
     { key: '全部应用', label: '全部应用', icon: <AppstoreOutlined /> },
     { key: '数据库', label: '数据库', icon: <DatabaseOutlined /> },
-    { key: '研发与运维', label: '研发与运维', icon: <CodeOutlined /> },
-    { key: '容器', label: '容器', icon: <ContainerOutlined /> },
+    { key: '消息与集成', label: '消息与集成', icon: <MessageOutlined /> },
+    { key: '应用支撑', label: '应用支撑', icon: <ToolOutlined /> },
   ];
   // 筛选应用
   const filteredApps = apps.filter((app) => {
