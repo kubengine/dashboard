@@ -94,12 +94,15 @@ export const get_init_field_config = (): AppFieldConfig => {
     }
 }
 
-export async function list(name: string, page_size: number, page: number) {
+export async function list(name: string, page_size: number, page: number, category?: string) {
     const params: Record<string, any> = {};
     params.page_size = page_size
     params.page = page
     if (name && name.trim()) {
         params.name = name.trim();
+    }
+    if (category && category.trim()) {
+        params.category = category.trim();
     }
     return request<API.Result>(`/api/v1/app/list`, { method: 'GET', params });
 }

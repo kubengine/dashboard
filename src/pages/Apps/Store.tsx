@@ -34,10 +34,12 @@ const Store: React.FC = () => {
     pageSize: 8,
   });
   const getConfig = async () => {
+    const category = activeCategory === '全部应用' ? '' : activeCategory;
     const { code, data } = await services.AppsController.list(
       '',
       paginationParams.pageSize,
       paginationParams.current,
+      category,
     );
     if (code == 200) {
       setApps(data.data);
@@ -48,7 +50,7 @@ const Store: React.FC = () => {
   };
   useEffect(() => {
     getConfig();
-  }, [paginationParams]);
+  }, [paginationParams, activeCategory]);
   // 分类数据
   const categories = [
     { key: '全部应用', label: '全部应用', icon: <AppstoreOutlined /> },
@@ -56,14 +58,6 @@ const Store: React.FC = () => {
     { key: '消息与集成', label: '消息与集成', icon: <MessageOutlined /> },
     { key: '应用支撑', label: '应用支撑', icon: <ToolOutlined /> },
   ];
-  // 筛选应用
-  const filteredApps = apps.filter((app) => {
-    if (activeCategory === '全部应用') {
-      return true;
-    }
-    // 分类筛选
-    return app.category.includes(activeCategory);
-  });
   const AppCover: React.FC<{ app_name: string }> = ({ app_name }) => {
     const [imgError, setImgError] = useState(false);
     if (!app_name || imgError) {
@@ -86,7 +80,10 @@ const Store: React.FC = () => {
         {categories.map((category) => (
           <Col span={4}>
             <Card
-              onClick={() => setActiveCategory(category.key)}
+              onClick={() => {
+                setActiveCategory(category.key);
+                setPaginationParams((prev) => ({ ...prev, current: 1 }));
+              }}
               style={
                 category.key == activeCategory
                   ? {
@@ -111,13 +108,13 @@ const Store: React.FC = () => {
       <Divider />
 
       {/* 应用卡片 */}
-      {filteredApps.length == 0 ? (
+      {apps.length == 0 ? (
         <Col span={24} key={'empty'}>
           <Empty image={Empty.PRESENTED_IMAGE_DEFAULT} />
         </Col>
       ) : (
         <Space wrap={true}>
-          {filteredApps.map((app) => (
+          {apps.map((app) => (
             <Card
               style={{ width: 300, height: 360 }}
               cover={<AppCover app_name={app.name} />}
