@@ -178,8 +178,9 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
         collapsed={collapseds.basic}
       >
         <DynamicForm
-          labelCol={{ span: 4 }}
-          wrapperCol={{ span: 14 }}
+          labelCol={{ span: 6 }}
+          wrapperCol={{ span: 16 }}
+          labelWrap
           style={{ maxWidth: 700 }}
           form={basicForm}
           fields={basicFields}
@@ -202,8 +203,9 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
         collapsed={collapseds.cluster}
       >
         <DynamicForm
-          labelCol={{ span: 4 }}
-          wrapperCol={{ span: 14 }}
+          labelCol={{ span: 6 }}
+          wrapperCol={{ span: 16 }}
+          labelWrap
           form={clusterForm}
           style={{ maxWidth: 700 }}
           fields={(
@@ -232,8 +234,9 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
         collapsed={collapseds.env}
       >
         <DynamicForm
-          labelCol={{ span: 4 }}
-          wrapperCol={{ span: 14 }}
+          labelCol={{ span: 6 }}
+          wrapperCol={{ span: 16 }}
+          labelWrap
           form={envForm}
           style={{ maxWidth: 700 }}
           fields={(
