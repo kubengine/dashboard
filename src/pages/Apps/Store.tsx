@@ -31,7 +31,7 @@ const Store: React.FC = () => {
     pageSize: number;
   }>({
     current: 1,
-    pageSize: 8,
+    pageSize: 10,
   });
   const getConfig = async () => {
     const category = activeCategory === '全部应用' ? '' : activeCategory;
