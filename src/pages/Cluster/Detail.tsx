@@ -62,10 +62,10 @@ const ClusterDetail: React.FC = () => {
           tab: '配置和存储',
           key: '3',
         },
-        {
-          tab: '其他',
-          key: '4',
-        },
+        // {
+        //   tab: '其他',
+        //   key: '4',
+        // },
       ]}
     >
       <div
@@ -85,7 +85,7 @@ const ClusterDetail: React.FC = () => {
         {activeTabKey === '1' && <Workload name={name} />}
         {activeTabKey === '2' && <Networking name={name} />}
         {activeTabKey === '3' && <ConfigAndPVC name={name} />}
-        {activeTabKey === '4' && <Other name={name} />}
+        {/* {activeTabKey === '4' && <Other name={name} />} */}
       </div>
     </PageContainer>
   );

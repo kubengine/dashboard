@@ -137,7 +137,22 @@ const Cluster: React.FC = () => {
   };
   const removeCluster = async (cluster_id: number) => {
     setLoading(true);
-    await services.AppsController.del_cluster(cluster_id);
+    const { code } = await services.AppsController.del_cluster(cluster_id);
+    if (code == 200) {
+      message.success('删除成功');
+      // 本页已是最后一行所在页：删除后回退一页，避免空页
+      if (
+        clusters.length === 1 &&
+        paginationParams.current > 1
+      ) {
+        setPaginationParams({
+          current: paginationParams.current - 1,
+          pageSize: paginationParams.pageSize,
+        });
+      } else {
+        getCluster();
+      }
+    }
     setLoading(false);
   };
   const columns = [
