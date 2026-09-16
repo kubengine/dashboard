@@ -89,7 +89,7 @@ export const RepoPage: React.FC<RepoProps> = ({
       pageSize,
       current,
     );
-    if (code == 200) {
+    if (code === 200) {
       setArtifactRepository(data);
       if (searchText) {
         setRepoCount(data.length);
@@ -102,7 +102,7 @@ export const RepoPage: React.FC<RepoProps> = ({
 
   const fetchProject = async () => {
     const { code, data } = await service.ArtifactsController.get_projects(name);
-    if (code == 200) {
+    if (code === 200) {
       setRepoCount(data.repo_count);
     } else {
       message.error(`获取${name}仓库失败`);
@@ -122,7 +122,7 @@ export const RepoPage: React.FC<RepoProps> = ({
     );
     const { code, message: msg } =
       await service.ArtifactsController.del_repositories(name, r_name);
-    if (code == 200) {
+    if (code === 200) {
       message.success('仓库删除成功');
       fetchRepos(); // 重新加载列表
     } else {
@@ -253,9 +253,15 @@ export const RepoPage: React.FC<RepoProps> = ({
         <Button
           type="primary"
           icon={<UploadOutlined />}
-          onClick={() => setUploadModalVisible(true)}
+          onClick={() => {
+            if (name === RepoType.Image) {
+              history.push('/artifacts/imageImports?create=1');
+              return;
+            }
+            setUploadModalVisible(true);
+          }}
         >
-          {name == RepoType.Chart ? '上传Chart' : '上传镜像'}
+          {name === RepoType.Chart ? '上传Chart' : '上传镜像'}
         </Button>
       </div>
 
@@ -278,40 +284,32 @@ export const RepoPage: React.FC<RepoProps> = ({
         />
       </Spin>
 
-      {/* 上传Chart弹窗 */}
-      <Modal
-        title={name == RepoType.Chart ? '上传Helm Chart' : '上传镜像'}
-        open={uploadModalVisible}
-        onCancel={() => setUploadModalVisible(false)}
-        footer={null}
-        destroyOnHidden={true}
-      >
-        <Upload
-          name="file"
-          action={
-            name == RepoType.Chart
-              ? '/api/v1/artifacts/upload/chart'
-              : '/api/v1/artifacts/upload/image'
-          }
-          headers={{ Authorization: `${getBearerToken()}` }}
-          onChange={handleUpload}
-          accept={name == RepoType.Chart ? '.tgz,.tar.gz' : '.tar,tar.gz,.tgz'}
-          // maxCount={10}
-          multiple={true}
+      {/* 上传 Chart 弹窗；镜像上传由独立的镜像导入页面处理 */}
+      {name === RepoType.Chart && (
+        <Modal
+          title="上传Helm Chart"
+          open={uploadModalVisible}
+          onCancel={() => setUploadModalVisible(false)}
+          footer={null}
+          destroyOnHidden={true}
         >
-          <Button icon={<UploadOutlined />}>
-            {name == RepoType.Chart
-              ? '选择Chart包(.tgz/.tar.gz)'
-              : '选择镜像文件(.tar/.tar.gz/.tgz)'}
-          </Button>
-        </Upload>
-        <Divider />
-        <Text type="secondary">
-          {name == RepoType.Chart
-            ? '提示:仅支持标准Helm Chart包格式(.tgz/.tar.gz),请注意调整chart中镜像信息'
-            : '提示：仅支持标准OCI标准镜像,文件名以tar结尾,且镜像name应为kubengine.io/apps/xxx'}
-        </Text>
-      </Modal>
+          <Upload
+            name="file"
+            action="/api/v1/artifacts/upload/chart"
+            headers={{ Authorization: `${getBearerToken()}` }}
+            onChange={handleUpload}
+            accept=".tgz,.tar.gz"
+            multiple={true}
+          >
+            <Button icon={<UploadOutlined />}>选择Chart包(.tgz/.tar.gz)</Button>
+          </Upload>
+          <Divider />
+          <Text type="secondary">
+            提示:仅支持标准Helm
+            Chart包格式(.tgz/.tar.gz),请注意调整chart中镜像信息
+          </Text>
+        </Modal>
+      )}
     </Card>
   );
 };
