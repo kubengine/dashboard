@@ -41,3 +41,65 @@
     opacity: 1;
   }
 }
+
+// KubeEngine 横向品牌标识：登录页只显示 Logo，不再叠加文字标题
+.ant-pro-form-login-header {
+  height: 72px;
+  margin-bottom: 12px;
+  line-height: 72px;
+
+  .ant-pro-form-login-logo {
+    width: 240px;
+    height: auto;
+    margin-inline-end: 0;
+    line-height: normal;
+
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+  }
+}
+
+// 布局左上角：展开显示横向 Logo，折叠显示方形图标
+#logo.ant-pro-sider-logo {
+  justify-content: center;
+}
+
+.kubeengine-sider-brand {
+  display: block;
+  width: 132px;
+  height: auto;
+  object-fit: contain;
+}
+
+.kubeengine-sider-brand-collapsed {
+  width: 32px;
+  height: 32px;
+}
+
+// 左下角用户/退出入口始终使用方形 Logo，并保留原有交互
+.umi-plugin-layout-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 0;
+  background: transparent;
+
+  > img {
+    content: url('/assets/logo.png');
+    object-fit: contain;
+  }
+}
+
+.ant-pro-sider:not(.ant-pro-sider-collapsed) {
+  .umi-plugin-layout-action {
+    padding: 0 12px;
+  }
+}
+
+.ant-pro-sider-collapsed {
+  .umi-plugin-layout-action {
+    padding: 0;
+  }
+}

@@ -114,8 +114,8 @@ const Login: React.FC = () => {
             minWidth: 280,
             maxWidth: '75vw',
           }}
-          logo={<img alt="logo" src="/assets/logo.png" />}
-          title={DEFAULT_NAME}
+          logo="/assets/logo-v2.png"
+          title={false}
           initialValues={{
             autoLogin: true,
           }}

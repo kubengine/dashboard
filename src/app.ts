@@ -5,6 +5,7 @@ import type {
   RunTimeLayoutConfig,
 } from '@umijs/max';
 import { message, notification } from 'antd';
+import { createElement } from 'react';
 import { clearAuthStore, getAKSK, getAuthStore, getBearerToken, isTokenExpired, saveToken } from './utils/auth';
 import { getNonce, getTimestamp, signAKSK } from './utils/aksk';
 
@@ -27,8 +28,16 @@ export async function getInitialState() {
 // 布局配置实现登录拦截
 export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) => {
   return {
-    title: 'kubengine',
-    logo: '/assets/logo.png',
+    title: false,
+    logo: '/assets/logo-v2.png',
+    menuHeaderRender: (_logo, _title, props) =>
+      createElement('img', {
+        src: props?.collapsed ? '/assets/logo.png' : '/assets/logo-v2.png',
+        alt: 'KubeEngine',
+        className: props?.collapsed
+          ? 'kubeengine-sider-brand kubeengine-sider-brand-collapsed'
+          : 'kubeengine-sider-brand',
+      }),
     // 页面切换时检查登录状态
     onPageChange: () => {
       const { pathname } = location;
