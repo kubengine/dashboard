@@ -86,7 +86,7 @@ const StatusLabel: React.FC<{ status: string }> = ({ status }) => {
 /**
  * 应用集群的主接口
  */
-interface Cluster {
+interface ClusterRecord {
   /** 集群ID */
   cluster_id: number;
   /** 集群名称 */
@@ -116,8 +116,8 @@ const Cluster: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [visible, setVisible] = useState<boolean>(false);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
-  const [clusters, setClusters] = useState<Cluster[]>([]);
-  const [editData, setEditData] = useState<Cluster>();
+  const [clusters, setClusters] = useState<ClusterRecord[]>([]);
+  const [editData, setEditData] = useState<ClusterRecord>();
   const [form] = Form.useForm();
   const [paginationParams, setPaginationParams] = useState<{
     current: number;
@@ -127,6 +127,22 @@ const Cluster: React.FC = () => {
     pageSize: 10,
   });
   const [count, setCount] = useState<number>(0);
+  const getCluster = async () => {
+    setLoading(true);
+    const { code, data } = await services.AppsController.cluster_list(
+      searchText,
+      paginationParams.pageSize,
+      paginationParams.current,
+    );
+    if (code === 200) {
+      setClusters(data.data);
+      setCount(data.total);
+    } else {
+      message.error('获取应用配置列表失败');
+    }
+    setLoading(false);
+  };
+
   // 分页变化回调：获取并更新分页参数
   const handleTableChange: PaginationProps['onChange'] = (
     current: number, // 当前页码
@@ -137,23 +153,17 @@ const Cluster: React.FC = () => {
   };
   const removeCluster = async (cluster_id: number) => {
     setLoading(true);
-    const { code } = await services.AppsController.del_cluster(cluster_id);
-    if (code == 200) {
-      message.success('删除成功');
-      // 本页已是最后一行所在页：删除后回退一页，避免空页
-      if (
-        clusters.length === 1 &&
-        paginationParams.current > 1
-      ) {
-        setPaginationParams({
-          current: paginationParams.current - 1,
-          pageSize: paginationParams.pageSize,
-        });
-      } else {
-        getCluster();
+    try {
+      const { code } = await services.AppsController.del_cluster(cluster_id);
+      if (code === 200) {
+        message.info(
+          '清理任务已提交，完成后记录会自动移除；清理失败会保留记录',
+        );
+        await getCluster();
       }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
   const columns = [
     {
@@ -161,8 +171,8 @@ const Cluster: React.FC = () => {
       dataIndex: 'cluster_id',
       key: 'cluster_id',
       width: 100,
-      render: (cluster_id: number, record: Cluster) =>
-        record.status != 'healthy' ? (
+      render: (cluster_id: number, record: ClusterRecord) =>
+        record.status !== 'healthy' ? (
           <span>{cluster_id}</span>
         ) : (
           <Link to={`/apps/cluster/detail/${cluster_id}`}>{cluster_id}</Link>
@@ -204,7 +214,7 @@ const Cluster: React.FC = () => {
       title: '操作',
       key: 'action',
       width: 200,
-      render: (_: any, record: Cluster) => (
+      render: (_: any, record: ClusterRecord) => (
         <Space size="middle">
           <Button
             type="text"
@@ -232,9 +242,9 @@ const Cluster: React.FC = () => {
               setVisible(true);
             }}
             disabled={
-              record.status != 'healthy' &&
-              record.status != 'unhealthy' &&
-              record.status != 'anomaly'
+              record.status !== 'healthy' &&
+              record.status !== 'unhealthy' &&
+              record.status !== 'anomaly'
             }
           >
             修改名称
@@ -252,9 +262,9 @@ const Cluster: React.FC = () => {
               danger
               icon={<DeleteOutlined />}
               disabled={
-                record.status != 'healthy' &&
-                record.status != 'unhealthy' &&
-                record.status != 'anomaly'
+                record.status !== 'healthy' &&
+                record.status !== 'unhealthy' &&
+                record.status !== 'anomaly'
               }
             >
               删除
@@ -282,32 +292,17 @@ const Cluster: React.FC = () => {
     }
     setModalLoading(false);
   };
-  const getCluster = async () => {
-    setLoading(true);
-    const { code, data } = await services.AppsController.cluster_list(
-      searchText,
-      paginationParams.pageSize,
-      paginationParams.current,
-    );
-    if (code == 200) {
-      setClusters(data.data);
-      setCount(data.total);
-    } else {
-      message.error('获取应用配置列表失败');
-    }
-    setLoading(false);
-  };
 
   useEffect(() => {
     if (messages.length > 0) {
-      messages.map(({ type, data }) => {
-        if (type == 'receive') {
-          if (data.action == 'update_cluster') {
+      messages.forEach(({ type, data }) => {
+        if (type === 'receive') {
+          if (data.action === 'update_cluster') {
             // 使用函数式更新，避免闭包陈旧用旧数据覆盖最新列表
             setClusters((prev) => {
               const newClusters = [...(prev || [])];
               const targetIndex = newClusters.findIndex(
-                (item) => item.cluster_id == data.data.cluster_id,
+                (item) => item.cluster_id === data.data.cluster_id,
               );
               if (targetIndex !== -1) {
                 newClusters[targetIndex] = data.data;
@@ -316,7 +311,7 @@ const Cluster: React.FC = () => {
               // 列表中不存在（例如新部署的集群），交给 refresh_clusters 处理，不覆盖
               return prev;
             });
-          } else if (data.action == 'refresh_clusters') {
+          } else if (data.action === 'refresh_clusters') {
             getCluster();
           }
         }
@@ -352,7 +347,7 @@ const Cluster: React.FC = () => {
         />
       </div>
       <Spin spinning={loading}>
-        <Table<Cluster>
+        <Table<ClusterRecord>
           dataSource={clusters}
           columns={columns}
           rowKey="cluster_id"

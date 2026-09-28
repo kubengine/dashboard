@@ -17,9 +17,8 @@ export default defineConfig({
       layout: false,
     },
     {
-      name: '免密登录',
       path: '/pf/login',
-      component: '@/pages/User/Login/PasswordFree',
+      redirect: '/user/login',
       layout: false,
     },
     { path: '/', redirect: '/home' },

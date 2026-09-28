@@ -4,10 +4,7 @@
 
 ### KubeEngine 容器云管理平台前端
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://react.dev/)
-[![Umi](https://img.shields.io/badge/Umi_Max-4.6+-000000.svg)](https://umijs.org/)
-[![Ant Design](https://img.shields.io/badge/Ant_Design-5.4+-1890FF.svg)](https://ant.design/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://react.dev/) [![Umi](https://img.shields.io/badge/Umi_Max-4.6+-000000.svg)](https://umijs.org/) [![Ant Design](https://img.shields.io/badge/Ant_Design-5.4+-1890FF.svg)](https://ant.design/)
 
 </div>
 
@@ -33,23 +30,27 @@ KubeEngine Dashboard 作为 KubeEngine 平台的 Web 前端，提供了完整的
 
 ## ✨ 核心特性
 
-### 🔐 双重认证机制
+### 🔐 登录与会话
+
 - **Token 认证**：基于 JWT 的用户名密码登录
-- **AKSK 认证**：基于 Access Key/Secret Key 的 API 访问
+- **会话撤销**：退出登录调用后端撤销令牌；旧 AK/SK 认证已停用
 - **自动续期**：Token 即将过期时自动更新
 - **安全拦截**：全局路由守卫，未登录自动跳转
 
 ### 📊 实时数据展示
+
 - **WebSocket 集成**：实时日志流与任务状态更新
 - **响应式布局**：适配各种屏幕尺寸
 - **数据可视化**：基于 Ant Design Charts 的图表展示
 
 ### 🎨 现代化 UI
+
 - **Ant Design Pro 组件**：开箱即用的企业级组件
 - **主题定制**：支持亮色/暗色主题切换
 - **国际化支持**：内置中英文语言包
 
 ### 🚀 高性能体验
+
 - **按需加载**：路由级别的代码分割
 - **缓存优化**：静态资源缓存策略
 - **构建优化**：生产环境自动压缩与优化
@@ -57,19 +58,23 @@ KubeEngine Dashboard 作为 KubeEngine 平台的 Web 前端，提供了完整的
 ## 🛠️ 技术栈
 
 ### 核心框架
+
 - **React 18**：用户界面库
 - **Umi Max 4**：企业级前端应用框架
 - **TypeScript 5**：类型安全的 JavaScript 超集
 - **Ant Design 5**：企业级 UI 设计语言
 
 ### 状态管理
+
 - **Umi Model**：内置的状态管理方案
 
 ### 网络请求
+
 - **Umi Request**：基于 fetch 封装的请求库
 - **WebSocket API**：实时通信支持
 
 ### 工具库
+
 - **@ant-design/icons**：Ant Design 官方图标库
 - **@ant-design/pro-components**：高级业务组件
 - **@ant-design/plots**：可视化图表组件
@@ -79,6 +84,7 @@ KubeEngine Dashboard 作为 KubeEngine 平台的 Web 前端，提供了完整的
 - **yaml**：YAML 解析与序列化
 
 ### 开发工具
+
 - **Prettier**：代码格式化
 - **Husky**：Git hooks 管理
 - **lint-staged**：暂存文件检查
@@ -159,8 +165,8 @@ dashboard/
 │   │   ├── UserController.ts
 │   │   └── index.ts
 │   └── utils/             # 工具函数
-│       ├── auth.ts        # 认证工具（Token/AKSK）
-│       ├── aksk.ts        # AKSK 签名
+│       ├── auth.ts        # Bearer 会话与过期管理
+│       ├── websocketClient.ts # WebSocket 连接和会话切换
 │       └── ...
 ├── dist/                  # 构建输出目录
 ├── mock/                  # Mock 数据
@@ -172,21 +178,25 @@ dashboard/
 ## 📱 功能模块
 
 ### 用户管理 (`/user`)
-- 用户登录（Token / AKSK 两种认证方式）
+
+- 用户名密码登录（Bearer Token）
 - 登录状态维护与自动续期
 - 安全登出
 
 ### 首页 (`/`)
+
 - 平台概览
 - 快速入口
 
 ### 集群管理 (`/cluster`)
+
 - 集群列表展示
 - 集群详情查看
 - 节点资源监控
 - 集群配置管理
 
 ### 应用管理 (`/apps`)
+
 - 应用列表
 - 应用部署配置
 - 应用配置编辑器
@@ -194,10 +204,12 @@ dashboard/
 - 应用商店
 
 ### 制品管理 (`/artifacts`)
+
 - 镜像制品管理
 - 构建任务查看
 
 ### WebSocket 实时通信
+
 - 实时日志流
 - 任务状态更新
 - 连接状态监控
@@ -207,17 +219,20 @@ dashboard/
 ### 开发环境配置
 
 1. **克隆项目**
+
 ```bash
 git clone https://github.com/your-org/dashboard.git
 cd dashboard
 ```
 
 2. **安装依赖**
+
 ```bash
 pnpm install
 ```
 
 3. **启动开发服务器**
+
 ```bash
 pnpm dev
 ```
@@ -267,6 +282,7 @@ export async function createExample(data: any) {
 ### 认证机制
 
 #### Token 认证
+
 ```typescript
 import { getBearerToken } from '@/utils/auth';
 
@@ -274,16 +290,9 @@ import { getBearerToken } from '@/utils/auth';
 // Authorization: Bearer <token>
 ```
 
-#### AKSK 认证
-```typescript
-import { getAKSK } from '@/utils/auth';
+#### 会话安全
 
-// 请求会自动携带签名相关 Headers
-// ak: <AccessKey>
-// timestamp: <Signature>
-// nonce: <RandomString>
-// signature: <CalculatedSignature>
-```
+旧 AK/SK 与内置密码免密登录已停用，`/pf/login` 跳转到正常登录页。退出登录先撤销后端令牌；续签使用 JWT `exp` 更新本地时间，并重新连接 WebSocket。详细说明见 [认证与后端适配](docs/auth-security-migration.md)。
 
 ## 🏗️ 构建部署
 

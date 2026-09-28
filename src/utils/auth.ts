@@ -1,10 +1,4 @@
-// src/utils/auth.ts
-/**
- * 鉴权凭证存储工具（Token/AKSK）- 适配 Umi Max
- */
-type AuthType = 'token' | 'aksk';
-
-// Token 存储结构
+/** Bearer 会话存储。JWT exp 仅用于界面计时，身份校验始终由服务端完成。 */
 export interface TokenInfo {
   accessToken: string;
   tokenType: string;
@@ -12,92 +6,157 @@ export interface TokenInfo {
   username: string;
 }
 
-// AKSK 存储结构
-export interface AKSKInfo {
-  ak: string;
-  sk: string;
-  expiresAt: string;
-}
-
-// 全局鉴权配置
 interface AuthStore {
-  authType: AuthType; // 当前鉴权类型
+  authType: 'token';
+  sessionId?: string;
   token?: TokenInfo;
-  aksk?: AKSKInfo;
 }
 
-// 存储 key
-const AUTH_STORE_KEY = 'PRO_AUTH_STORE';
+export const AUTH_STORE_KEY = 'PRO_AUTH_STORE';
+const AUTH_CHANGED = 'kubengine:auth-changed';
+let logoutPending: Promise<void> | null = null;
 
-/**
- * 获取当前鉴权配置
- */
-export const getAuthStore = (): AuthStore => {
-  const storeStr = localStorage.getItem(AUTH_STORE_KEY);
-  return storeStr ? (JSON.parse(storeStr) as AuthStore) : { authType: 'token' };
-};
-
-/**
- * 保存鉴权配置
- */
-export const setAuthStore = (data: Partial<AuthStore>): AuthStore => {
-  const oldStore = getAuthStore();
-  const newStore = { ...oldStore, ...data };
-  localStorage.setItem(AUTH_STORE_KEY, JSON.stringify(newStore));
-  return newStore;
-};
-
-/**
- * 保存 Token 信息
- */
-export const saveToken = (tokenInfo: TokenInfo): AuthStore => {
-  return setAuthStore({
-    authType: 'token',
-    token: tokenInfo,
-  });
-};
-
-/**
- * 保存 AKSK 信息
- */
-export const saveAKSK = (akskInfo: AKSKInfo): AuthStore => {
-  return setAuthStore({
-    authType: 'aksk',
-    aksk: akskInfo,
-  });
-};
-
-/**
- * 获取当前有效 Token（Bearer Token）
- */
-export const getBearerToken = (): string => {
-  const { authType, token } = getAuthStore();
-  if (authType === 'token' && token?.accessToken) {
-    return `${token.tokenType || 'Bearer'} ${token.accessToken}`;
+export const getTokenExpiresAt = (accessToken: string): string | undefined => {
+  try {
+    const segments = accessToken.split('.');
+    if (segments.length !== 3) return;
+    const encoded = segments[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(
+      atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=')),
+    );
+    if (typeof payload.exp !== 'number' || !Number.isFinite(payload.exp))
+      return;
+    return new Date(payload.exp * 1000).toISOString();
+  } catch {
+    return;
   }
-  return '';
 };
 
-/**
- * 获取 AKSK 信息
- */
-export const getAKSK = (): AKSKInfo | undefined => {
-  const { authType, aksk } = getAuthStore();
-  return authType === 'aksk' ? aksk : undefined;
-};
+const announceChange = () => window.dispatchEvent(new Event(AUTH_CHANGED));
 
-/**
- * 清空所有鉴权信息（登出）
- */
 export const clearAuthStore = (): void => {
   localStorage.removeItem(AUTH_STORE_KEY);
+  announceChange();
 };
 
-/**
- * 检查 Token 是否过期（简单校验，后端最终校验）
- */
+export const getAuthStore = (): AuthStore => {
+  const raw = localStorage.getItem(AUTH_STORE_KEY);
+  if (!raw) return { authType: 'token' };
+  try {
+    const stored = JSON.parse(raw);
+    const token = stored?.token;
+    const expiresAt =
+      typeof token?.accessToken === 'string'
+        ? getTokenExpiresAt(token.accessToken)
+        : undefined;
+    if (stored.authType === 'token' && expiresAt) {
+      const store: AuthStore = {
+        authType: 'token',
+        sessionId: stored.sessionId || token.accessToken,
+        token: {
+          accessToken: token.accessToken,
+          tokenType: 'Bearer',
+          expiresAt,
+          username: typeof token.username === 'string' ? token.username : '',
+        },
+      };
+      if ('aksk' in stored)
+        localStorage.setItem(AUTH_STORE_KEY, JSON.stringify(store));
+      return store;
+    }
+  } catch {
+    // 旧 AK/SK、损坏的存储和无有效 exp 的令牌均不再作为登录会话。
+  }
+  clearAuthStore();
+  return { authType: 'token' };
+};
+
+const storeToken = (
+  token: TokenInfo,
+  sessionId: string,
+): AuthStore & { token: TokenInfo } => {
+  const expiresAt = getTokenExpiresAt(token.accessToken);
+  if (!expiresAt || Date.parse(expiresAt) <= Date.now()) {
+    throw new Error('登录令牌无效或已过期，请重新登录');
+  }
+  const store = {
+    authType: 'token' as const,
+    sessionId,
+    token: { ...token, tokenType: 'Bearer', expiresAt },
+  };
+  localStorage.setItem(AUTH_STORE_KEY, JSON.stringify(store));
+  announceChange();
+  return store;
+};
+
+export const saveToken = (token: TokenInfo) =>
+  storeToken(
+    token,
+    // 仅用于区分本地登录会话，不作为服务端凭据。
+    `${Date.now()}-${Math.random()}`,
+  );
+
+export const getBearerToken = (): string => {
+  const token = getAuthStore().token;
+  return token ? `Bearer ${token.accessToken}` : '';
+};
+
 export const isTokenExpired = (): boolean => {
-  const { token } = getAuthStore();
-  if (!token?.expiresAt) return true;
-  return new Date(token.expiresAt) < new Date();
+  const expiresAt = getAuthStore().token?.expiresAt;
+  return !expiresAt || Date.parse(expiresAt) <= Date.now();
+};
+
+/** 只接收当前会话发出的请求的续签结果，防止登出后被迟到响应重新登录。 */
+export const renewToken = (
+  requestBearer: string,
+  accessToken: string,
+  tokenType: string,
+): boolean => {
+  const current = getAuthStore();
+  if (
+    logoutPending ||
+    !current.token ||
+    !requestBearer ||
+    requestBearer !== getBearerToken()
+  )
+    return false;
+  try {
+    storeToken(
+      { ...current.token, accessToken, tokenType },
+      current.sessionId!,
+    );
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** 先撤销服务端令牌；失败时仍清理本地会话，由调用方明确提示撤销失败。 */
+export const endSession = (
+  revoke: (bearer: string) => Promise<unknown>,
+): Promise<void> => {
+  if (logoutPending) return logoutPending;
+  const sessionId = getAuthStore().sessionId;
+  const bearer = getBearerToken();
+  logoutPending = Promise.resolve().then(async () => {
+    try {
+      if (bearer) await revoke(bearer);
+    } finally {
+      if (getAuthStore().sessionId === sessionId) clearAuthStore();
+      logoutPending = null;
+    }
+  });
+  return logoutPending;
+};
+
+export const subscribeAuthChanges = (listener: () => void): (() => void) => {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === AUTH_STORE_KEY || event.key === null) listener();
+  };
+  window.addEventListener(AUTH_CHANGED, listener);
+  window.addEventListener('storage', onStorage);
+  return () => {
+    window.removeEventListener(AUTH_CHANGED, listener);
+    window.removeEventListener('storage', onStorage);
+  };
 };

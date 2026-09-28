@@ -5,7 +5,7 @@ import { saveToken } from '@/utils/auth';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { LoginForm, ProFormText } from '@ant-design/pro-components';
 import { Helmet, history, useModel } from '@umijs/max';
-import { Alert, message, Tabs } from 'antd';
+import { message, Tabs } from 'antd';
 import { createStyles } from 'antd-style';
 import React, { useState } from 'react';
 const { login } = service.UserController;
@@ -43,20 +43,6 @@ const useStyles = createStyles(({ token }) => {
     },
   };
 });
-const LoginMessage: React.FC<{
-  content: string;
-}> = ({ content }) => {
-  return (
-    <Alert
-      style={{
-        marginBottom: 24,
-      }}
-      message={content}
-      type="error"
-      showIcon
-    />
-  );
-};
 const Login: React.FC = () => {
   const [type, setType] = useState<string>('account');
   const { initialState, setInitialState } = useModel('@@initialState');
@@ -65,7 +51,7 @@ const Login: React.FC = () => {
   const handleLogin = async (values: { username: any; password: any }) => {
     const data = await login({ ...values });
     // 保存 Token 到本地
-    saveToken({
+    const store = saveToken({
       accessToken: data.access_token,
       tokenType: data.token_type,
       expiresAt: data.expires_at,
@@ -73,25 +59,26 @@ const Login: React.FC = () => {
     });
 
     // 更新全局初始状态
-    initialState
-      ? setInitialState({
-          ...initialState,
-          user: {
-            ...initialState.user,
-            accessToken: data.access_token,
-            tokenExpiresAt: data.expires_at,
-            authType: 'token',
-          },
-        })
-      : setInitialState({
-          avatar: '/assets/logo.png',
-          user: {
-            accessToken: data.access_token,
-            tokenExpiresAt: data.expires_at,
-            authType: 'token',
-            ak: '',
-          },
-        });
+    if (initialState) {
+      setInitialState({
+        ...initialState,
+        user: {
+          ...initialState.user,
+          accessToken: data.access_token,
+          tokenExpiresAt: store.token.expiresAt,
+          authType: 'token',
+        },
+      });
+    } else {
+      setInitialState({
+        avatar: '/assets/logo.png',
+        user: {
+          accessToken: data.access_token,
+          tokenExpiresAt: store.token.expiresAt,
+          authType: 'token',
+        },
+      });
+    }
     message.success('登录成功！');
     // 跳转首页
     history.push('/');
