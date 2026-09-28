@@ -7,7 +7,7 @@ import DynamicForm from './DynamicForm';
 
 interface AppConfigFormProps {
   app: App;
-  submit?: (val: any) => void;
+  submit?: (val: any) => void | Promise<void>;
 }
 
 export const AppConfigForm: React.FC<AppConfigFormProps> = ({
@@ -46,10 +46,11 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
       ...cluster,
       ...env,
     };
-    if (submit) {
-      submit(data);
+    try {
+      if (submit) await submit(data);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
   const fetchArtifacts = async (current = 1, pageSize = 100) => {
     const { code, data } = await services.ArtifactsController.get_artifacts(
@@ -59,7 +60,7 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
       pageSize,
       current,
     );
-    if (code == 200) {
+    if (code === 200) {
       const options = data
         .filter(
           (item: {
@@ -90,7 +91,7 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
   };
   useEffect(() => {
     // 获取version
-    if (app.helm_chart && app.helm_chart != '') {
+    if (app.helm_chart && app.helm_chart !== '') {
       fetchArtifacts();
     }
   }, [app]);
@@ -210,7 +211,7 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
           style={{ maxWidth: 700 }}
           fields={(
             app.app_field_configs.filter(
-              (item) => item.config_type == 'cluster',
+              (item) => item.config_type === 'cluster',
             ) || []
           ).sort((a: AppFieldConfig, b: AppFieldConfig) => {
             return a.order - b.order;
@@ -240,8 +241,9 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
           form={envForm}
           style={{ maxWidth: 700 }}
           fields={(
-            app.app_field_configs.filter((item) => item.config_type == 'env') ||
-            []
+            app.app_field_configs.filter(
+              (item) => item.config_type === 'env',
+            ) || []
           ).sort((a: AppFieldConfig, b: AppFieldConfig) => {
             return a.order - b.order;
           })}
