@@ -1,262 +1,208 @@
 import { KubernetesNodeData } from '@/components/data';
 import Labels from '@/components/Labels';
 import { formatBytes } from '@/utils/storage';
-import { CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
-import { history } from '@umijs/max';
 import {
-  Button,
-  Card,
-  Empty,
-  Progress,
-  Spin,
-  Table,
-  Tag,
-  Typography,
-} from 'antd';
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
+import { Link } from '@umijs/max';
+import { Card, Empty, Input, Progress, Table, Tag } from 'antd';
 import dayjs from 'dayjs';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 
-const { Title } = Typography;
-
-interface NodesTableProps {
+const Allocation: React.FC<{ value: string; percent: number }> = ({
+  value,
+  percent,
+}) => (
+  <div className="ke-node-allocation">
+    <div>
+      <span className="ke-mono">{value}</span>
+      <span className="ke-section-caption">
+        {Number(percent || 0).toFixed(1)}%
+      </span>
+    </div>
+    <Progress
+      percent={Math.max(0, Math.min(100, percent || 0))}
+      size="small"
+      strokeColor={percent > 85 ? '#b76b08' : '#4982ed'}
+      showInfo={false}
+    />
+  </div>
+);
+const bytes = (value: number) => {
+  const data = formatBytes(value);
+  return `${data.value} ${data.unit}`;
+};
+const NodesTable: React.FC<{
   dataSource?: KubernetesNodeData[];
   loading?: boolean;
   title?: string;
-}
-
-const NodesTable: React.FC<NodesTableProps> = ({
-  dataSource = [],
-  loading = false,
-  title = 'Nodes',
-}) => {
-  // 列定义
+}> = ({ dataSource = [], loading = false, title = '节点资源' }) => {
+  const [search, setSearch] = useState('');
+  const rows = useMemo(
+    () =>
+      dataSource.filter((row) =>
+        row.name.toLowerCase().includes(search.trim().toLowerCase()),
+      ),
+    [dataSource, search],
+  );
   const columns = [
     {
-      title: '名称',
+      title: '节点名称',
       dataIndex: 'name',
       key: 'name',
-      width: 120,
-      render: (text: string) => (
-        <Button
-          type="link"
-          onClick={() => {
-            history.push(`/nodeDetail?name=${text}`);
-          }}
-        >
-          {text}
-        </Button>
+      width: 195,
+      render: (name: string, row: KubernetesNodeData) => (
+        <div>
+          <Link
+            className="ke-node-name"
+            to={`/nodeDetail?name=${encodeURIComponent(name)}`}
+          >
+            {name}
+          </Link>
+          <div className="ke-node-sub">
+            {row.labels?.['kubernetes.io/arch'] || '—'} /{' '}
+            {row.labels?.['kubernetes.io/os'] || '—'}
+          </div>
+        </div>
       ),
     },
     {
-      title: '标签',
-      dataIndex: 'labels',
-      key: 'labels',
-      width: 200,
-      render: (labels: Record<string, string>, record: KubernetesNodeData) => (
-        <Labels labels={labels} key={record.key} />
-      ),
-    },
-    {
-      title: '准备状态',
+      title: '状态',
       dataIndex: 'ready',
       key: 'ready',
-      width: 50,
+      width: 110,
       render: (ready: boolean) => (
         <Tag
-          icon={ready ? <CheckCircleOutlined /> : <ClockCircleOutlined />}
+          icon={
+            ready ? (
+              <CheckCircleOutlined aria-hidden="true" />
+            ) : (
+              <ClockCircleOutlined aria-hidden="true" />
+            )
+          }
           color={ready ? 'success' : 'warning'}
         >
-          {ready ? 'True' : 'False'}
+          {ready ? '已就绪' : '未就绪'}
         </Tag>
       ),
     },
     {
-      title: 'CPU 请求（核数）',
-      dataIndex: 'cpuRequest',
-      key: 'cpuRequest',
-      width: 120,
-      render: (text: string, record: KubernetesNodeData) => {
-        const percent = record.cpuRequestsFraction;
-        var cpuRequests = record.cpuRequests;
-        if (cpuRequests > 1000) {
-          cpuRequests = cpuRequests / 1000;
-        }
-        return (
-          <>
-            {Number(cpuRequests) > 1000 ? (
-              <div>{cpuRequests}m</div>
-            ) : (
-              <div>{cpuRequests}</div>
-            )}
-            <Progress
-              percent={percent}
-              size="small"
-              strokeColor={{
-                '0%': '#52c41a',
-                '100%': '#f5222d',
-              }}
-              showInfo={false}
-            />
-            <div style={{ fontSize: '12px', color: '#666' }}>({percent}%)</div>
-          </>
-        );
-      },
+      title: 'CPU 请求 / 容量',
+      key: 'cpu',
+      width: 185,
+      render: (_: unknown, row: KubernetesNodeData) => (
+        <Allocation
+          value={`${(row.cpuRequests / 1000).toFixed(2)} / ${
+            row.cpuCapacity / 1000
+          } 核`}
+          percent={row.cpuRequestsFraction}
+        />
+      ),
     },
     {
-      title: 'CPU 限制（核数）',
-      dataIndex: 'cpuLimit',
-      key: 'cpuLimit',
-      width: 120,
-      render: (text: string, record: KubernetesNodeData) => {
-        const percent = record.cpuLimitsFraction;
-        const cpuLimits = record.cpuLimits / 1000;
-        return (
-          <div>
-            <div>{cpuLimits}</div>
-            <Progress
-              percent={percent}
-              size="small"
-              strokeColor={{
-                '0%': '#52c41a',
-                '100%': '#f5222d',
-              }}
-              showInfo={false}
-            />
-            <div style={{ fontSize: '12px', color: '#666' }}>({percent}%)</div>
-          </div>
-        );
-      },
+      title: '内存请求 / 容量',
+      key: 'memory',
+      width: 195,
+      render: (_: unknown, row: KubernetesNodeData) => (
+        <Allocation
+          value={`${bytes(row.memoryRequests)} / ${bytes(row.memoryCapacity)}`}
+          percent={row.memoryRequestsFraction}
+        />
+      ),
     },
     {
-      title: 'CPU 容量（核数）',
-      dataIndex: 'cpuCapacity',
-      key: 'cpuCapacity',
-      width: 70,
-      render: (cpuCapacity: number) => {
-        return cpuCapacity / 1000;
-      },
-    },
-    {
-      title: '内存请求（字节数）',
-      dataIndex: 'memoryRequest',
-      key: 'memoryRequest',
-      width: 120,
-      render: (text: string, record: KubernetesNodeData) => {
-        const memoryRequests = record.memoryRequests;
-        const s = formatBytes(memoryRequests);
-        const percent = record.memoryRequestsFraction;
-        return (
-          <div>
-            <div>
-              {s.value} {s.unit}
-            </div>
-            <Progress
-              percent={percent}
-              size="small"
-              strokeColor={{
-                '0%': '#52c41a',
-                '100%': '#f5222d',
-              }}
-              showInfo={false}
-            />
-            <div style={{ fontSize: '12px', color: '#666' }}>({percent}%)</div>
-          </div>
-        );
-      },
-    },
-    {
-      title: '内存限制（字节数）',
-      dataIndex: 'memoryLimit',
-      key: 'memoryLimit',
-      width: 120,
-      render: (text: string, record: KubernetesNodeData) => {
-        const percent = record.memoryLimitsFraction;
-        const memoryLimits = record.memoryLimits;
-        const s = formatBytes(memoryLimits);
-        return (
-          <div>
-            <div>
-              {s.value} {s.unit}
-            </div>
-            <Progress
-              percent={percent}
-              size="small"
-              strokeColor={{
-                '0%': '#52c41a',
-                '100%': '#f5222d',
-              }}
-              showInfo={false}
-            />
-            <div style={{ fontSize: '12px', color: '#666' }}>({percent}%)</div>
-          </div>
-        );
-      },
-    },
-    {
-      title: '内存容量（字节数）',
-      dataIndex: 'memoryCapacity',
-      key: 'memoryCapacity',
-      width: 80,
-      render: (memoryCapacity: number) => {
-        const s = formatBytes(memoryCapacity);
-        return `${s.value} ${s.unit}`;
-      },
-    },
-    {
-      title: 'Pods',
-      dataIndex: 'pods',
+      title: '已分配 Pod',
       key: 'pods',
-      width: 120,
-      render: (text: string, record: KubernetesNodeData) => {
-        const percent = record.podFraction;
-        const allocatedPods = record.allocatedPods;
-        return (
-          <div>
-            <div>{allocatedPods}</div>
-            <Progress
-              percent={percent}
-              size="small"
-              strokeColor={{
-                '0%': '#52c41a',
-                '100%': '#f5222d',
-              }}
-              showInfo={false}
-            />
-            <div style={{ fontSize: '12px', color: '#666' }}>({percent}%)</div>
-          </div>
-        );
-      },
+      width: 145,
+      render: (_: unknown, row: KubernetesNodeData) => (
+        <Allocation
+          value={`${row.allocatedPods} 个`}
+          percent={row.podFraction}
+        />
+      ),
     },
     {
       title: '创建时间',
       dataIndex: 'creationTimestamp',
       key: 'creationTimestamp',
-      width: 120,
-      render: (creationTimestamp: string) => {
-        return dayjs(creationTimestamp).format('YYYY-MM-DD HH:mm:ss');
-      },
+      width: 150,
+      render: (value: string) => (
+        <span className="ke-section-caption">
+          {dayjs(value).format('YYYY-MM-DD HH:mm')}
+        </span>
+      ),
     },
   ];
-
   return (
-    <Card>
-      <Title level={2} style={{ marginBottom: '24px' }}>
-        {title}
-      </Title>
-      <Spin spinning={loading}>
-        <Table
-          dataSource={dataSource}
-          columns={columns}
-          pagination={false}
-          scroll={{ x: 1500 }}
-          size="middle"
-          locale={{
-            emptyText: <Empty description="暂无节点数据" />,
-          }}
+    <Card
+      className="ke-nodes"
+      title={
+        <div className="ke-node-title">
+          <span>{title}</span>
+          <Tag>{dataSource.length}</Tag>
+        </div>
+      }
+      extra={
+        <Input
+          aria-label="搜索节点"
+          size="small"
+          placeholder="搜索节点名称"
+          prefix={<SearchOutlined aria-hidden="true" />}
+          allowClear
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          style={{ width: 170 }}
         />
-      </Spin>
+      }
+    >
+      <Table
+        rowKey="name"
+        dataSource={rows}
+        columns={columns}
+        loading={loading}
+        pagination={false}
+        scroll={{ x: 1020 }}
+        size="middle"
+        locale={{
+          emptyText: (
+            <Empty
+              description={search ? '未找到匹配的节点' : '暂无节点数据'}
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          ),
+        }}
+        expandable={{
+          expandedRowRender: (row) => (
+            <div className="ke-node-details">
+              <p>
+                CPU 限制
+                <strong>
+                  {row.cpuLimits / 1000} 核（{row.cpuLimitsFraction}%）
+                </strong>
+              </p>
+              <p>
+                内存限制
+                <strong>
+                  {bytes(row.memoryLimits)}（{row.memoryLimitsFraction}%）
+                </strong>
+              </p>
+              <p>
+                CPU / 内存容量
+                <strong>
+                  {row.cpuCapacity / 1000} 核 / {bytes(row.memoryCapacity)}
+                </strong>
+              </p>
+              <div className="ke-node-labels">
+                <p style={{ marginBottom: 8 }}>节点标签</p>
+                <Labels labels={row.labels} key={row.name} />
+              </div>
+            </div>
+          ),
+        }}
+      />
     </Card>
   );
 };
-
 export default NodesTable;

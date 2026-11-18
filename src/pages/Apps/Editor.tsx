@@ -1,3 +1,4 @@
+import PageHeading from '@/components/PageHeading';
 // src/pages/Apps/RegisterApp.tsx
 import services from '@/services';
 import {
@@ -173,9 +174,7 @@ const Editor: React.FC = () => {
       // 这里应该调用实际的API保存应用配置
       if (app_id) {
         // 编辑
-        const { code, message: MSG } = await services.AppsController.update(
-          appData,
-        );
+        const { code } = await services.AppsController.update(appData);
         if (code == 200) {
           message.success('保存配置成功');
         } else {
@@ -183,9 +182,7 @@ const Editor: React.FC = () => {
         }
       } else {
         // 注册
-        const { code, message: MSG } = await services.AppsController.add(
-          appData,
-        );
+        const { code } = await services.AppsController.add(appData);
         if (code == 200) {
           message.success('应用注册成功');
           history.push('/apps/config');
@@ -278,7 +275,12 @@ const Editor: React.FC = () => {
   ];
 
   return (
-    <PageContainer loading={loading}>
+    <PageContainer loading={loading} title={false} breadcrumbRender={false}>
+      <PageHeading
+        eyebrow="APPLICATIONS / DEFINITION"
+        title={app_id ? '编辑应用' : '注册应用'}
+        description="定义基础信息、集群参数与环境变量，构建可复用的应用模板。"
+      />
       <Card>
         <Form layout="vertical">
           <Tabs

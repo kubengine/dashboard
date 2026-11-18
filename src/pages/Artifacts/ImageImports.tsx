@@ -1,3 +1,4 @@
+import PageHeading from '@/components/PageHeading';
 import service from '@/services';
 import type {
   ImageImportItem,
@@ -13,7 +14,6 @@ import type { UploadProps } from 'antd';
 import {
   Alert,
   Button,
-  Card,
   Descriptions,
   Drawer,
   Empty,
@@ -30,7 +30,7 @@ import dayjs from 'dayjs';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 const { Dragger } = Upload;
-const { Paragraph, Text, Title } = Typography;
+const { Text } = Typography;
 
 const statusMeta: Record<string, { color: string; label: string }> = {
   pending: { color: 'default', label: '等待处理' },
@@ -337,52 +337,53 @@ const ImageImports: React.FC = () => {
   ];
 
   return (
-    <Card>
-      <Space
-        align="start"
-        style={{ width: '100%', justifyContent: 'space-between' }}
-      >
-        <div>
-          <Title level={2} style={{ margin: 0 }}>
-            镜像导入
-          </Title>
-          <Paragraph type="secondary">
-            上传离线镜像包，并查看文件内每个镜像的导入与推送结果。
-          </Paragraph>
-        </div>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={() => void fetchTasks()}>
-            刷新
-          </Button>
-          <Button
-            type="primary"
-            icon={<CloudUploadOutlined />}
-            onClick={() => setUploadOpen(true)}
-          >
-            上传镜像文件
-          </Button>
-        </Space>
-      </Space>
-
-      <Table<ImageImportTask>
-        rowKey="task_id"
-        loading={loading}
-        dataSource={tasks}
-        columns={taskColumns}
-        scroll={{ x: 1100 }}
-        locale={{ emptyText: <Empty description="暂无镜像导入任务" /> }}
-        pagination={{
-          current: pagination.current,
-          pageSize: pagination.pageSize,
-          total: pagination.total,
-          showSizeChanger: true,
-          onChange: (current, pageSize) => {
-            setLoading(true);
-            void fetchTasks(current, pageSize);
-          },
-        }}
+    <>
+      <PageHeading
+        eyebrow="ARTIFACTS / IMAGE IMPORT"
+        title="镜像导入"
+        description="上传离线镜像包，跟踪每个镜像的校验、导入与推送结果。"
+        extra={
+          <>
+            <Button
+              icon={<ReloadOutlined />}
+              loading={loading}
+              onClick={() => {
+                setLoading(true);
+                void fetchTasks();
+              }}
+            >
+              刷新
+            </Button>
+            <Button
+              type="primary"
+              icon={<CloudUploadOutlined />}
+              onClick={() => setUploadOpen(true)}
+            >
+              上传镜像文件
+            </Button>
+          </>
+        }
       />
-
+      <div className="ke-table-panel">
+        <Table<ImageImportTask>
+          rowKey="task_id"
+          loading={loading}
+          dataSource={tasks}
+          columns={taskColumns}
+          scroll={{ x: 1100 }}
+          locale={{ emptyText: <Empty description="暂无镜像导入任务" /> }}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            showSizeChanger: true,
+            onChange: (current, pageSize) => {
+              setLoading(true);
+              void fetchTasks(current, pageSize);
+            },
+          }}
+        />
+      </div>
       <Modal
         title="上传离线镜像文件"
         open={uploadOpen}
@@ -493,7 +494,7 @@ const ImageImports: React.FC = () => {
           </>
         )}
       </Drawer>
-    </Card>
+    </>
   );
 };
 

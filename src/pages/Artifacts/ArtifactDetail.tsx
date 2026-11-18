@@ -1,3 +1,4 @@
+import PageHeading from '@/components/PageHeading';
 import YamlDisplay from '@/components/YamlDisplay';
 import services from '@/services';
 import {
@@ -42,6 +43,9 @@ const ArtifactDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [yamlText, setYamlText] = useState<string>('');
   const [artifactData, setArtifactData] = useState<any>();
+  const [tagModalVisible, setTagModalVisible] = useState<boolean>(false); // 对话框显隐
+  const [confirmLoading, setConfirmLoading] = useState<boolean>(false); // 提交加载状态
+  const [form] = Form.useForm(); // 表单实例
   const copyToClipboard = (text: string): Promise<void> => {
     // 优先使用现代API
     if (navigator.clipboard && window.isSecureContext) {
@@ -78,7 +82,7 @@ const ArtifactDetailPage: React.FC = () => {
     });
   };
   const copyConfig = (tag: string) => {
-    var configStr = '';
+    let configStr = '';
     if (artifactData.type == 'CHART') {
       configStr = `helm pull oci://kubengine.io/${project_name}/${repository_name} --version ${tag}`;
     } else {
@@ -217,9 +221,6 @@ const ArtifactDetailPage: React.FC = () => {
   };
 
   /** 提交新增 TAG 表单 */
-  const [tagModalVisible, setTagModalVisible] = useState<boolean>(false); // 对话框显隐
-  const [confirmLoading, setConfirmLoading] = useState<boolean>(false); // 提交加载状态
-  const [form] = Form.useForm(); // 表单实例
   const handleAddTagSubmit = async () => {
     try {
       // 1. 表单校验
@@ -261,9 +262,14 @@ const ArtifactDetailPage: React.FC = () => {
     }
   };
   return (
-    <PageContainer>
+    <PageContainer title={false} breadcrumbRender={false}>
+      <PageHeading
+        eyebrow="ARTIFACTS / DETAIL"
+        title={`${repository_name || '制品'} · 制品详情`}
+        description="查看标签、属性和模板内容，确认制品交付信息。"
+      />
       {/* 顶部 TAG 操作区 */}
-      <Card title="Tags">
+      <Card title="版本标签">
         <Space
           style={{
             width: '100%', // 必须占满宽度
@@ -305,40 +311,32 @@ const ArtifactDetailPage: React.FC = () => {
           size="small"
           contentStyle={{ whiteSpace: 'pre-wrap' }}
         >
-          {Object.entries(artifactData?.extra_attrs || {}).map(
-            ([key, value]) => {
-              if (key !== 'annotations') {
-                return (
-                  <Descriptions.Item
-                    label={key}
-                    span={2}
-                    children={`${
-                      typeof value === 'object' ? JSON.stringify(value) : value
-                    }`}
-                  />
-                );
-              }
-            },
-          )}
+          {Object.entries(artifactData?.extra_attrs || {})
+            .filter(([key]) => key !== 'annotations')
+            .map(([key, value]) => (
+              <Descriptions.Item key={key} label={key} span={2}>
+                {typeof value === 'object'
+                  ? JSON.stringify(value)
+                  : String(value)}
+              </Descriptions.Item>
+            ))}
           {Object.entries(artifactData?.annotations || {}).map(
-            ([key, value]) => {
-              return (
-                <Descriptions.Item
-                  label={key}
-                  span={2}
-                  children={`${
-                    typeof value === 'object'
-                      ? JSON.stringify(value, null, 2)
-                      : value
-                  }`}
-                />
-              );
-            },
+            ([key, value]) => (
+              <Descriptions.Item key={key} label={key} span={2}>
+                {typeof value === 'object'
+                  ? JSON.stringify(value, null, 2)
+                  : String(value)}
+              </Descriptions.Item>
+            ),
           )}
         </Descriptions>
       </Card>
-      
-      <YamlDisplay yamlText={yamlText} title="values.yaml"  hidden={artifactData?.type != 'CHART'}/>
+
+      <YamlDisplay
+        yamlText={yamlText}
+        title="values.yaml"
+        hidden={artifactData?.type != 'CHART'}
+      />
 
       <Modal
         title="新增 TAG"

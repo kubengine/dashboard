@@ -1,3 +1,4 @@
+import PageHeading from '@/components/PageHeading';
 import service from '@/services';
 import { getBearerToken } from '@/utils/auth';
 import {
@@ -9,7 +10,6 @@ import {
 import { history } from '@umijs/max';
 import {
   Button,
-  Card,
   Divider,
   Empty,
   Input,
@@ -27,7 +27,7 @@ import {
 import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 /** 制品/仓库信息接口（对应 JSON 结构） */
 interface ArtifactRepository {
@@ -59,10 +59,7 @@ interface RepoProps {
   nameAlias: string;
 }
 
-export const RepoPage: React.FC<RepoProps> = ({
-  name = '',
-  nameAlias = '',
-}) => {
+export const RepoPage: React.FC<RepoProps> = ({ name = '' }) => {
   // 状态管理
   const [loading, setLoading] = useState<boolean>(true);
   const [artifactRepositoryData, setArtifactRepository] = useState<
@@ -83,21 +80,26 @@ export const RepoPage: React.FC<RepoProps> = ({
   // 获取仓库列表数据
   const fetchRepos = async (current = 1, pageSize = 10) => {
     setLoading(true);
-    const { code, data } = await service.ArtifactsController.get_repositories(
-      name,
-      searchText ? `name${encodeURIComponent('=')}~${searchText}` : '',
-      pageSize,
-      current,
-    );
-    if (code === 200) {
-      setArtifactRepository(data);
-      if (searchText) {
-        setRepoCount(data.length);
+    try {
+      const { code, data } = await service.ArtifactsController.get_repositories(
+        name,
+        searchText ? `name${encodeURIComponent('=')}~${searchText}` : '',
+        pageSize,
+        current,
+      );
+      if (code === 200) {
+        setArtifactRepository(data);
+        if (searchText) {
+          setRepoCount(data.length);
+        }
+      } else {
+        message.error('获取仓库列表失败');
       }
-    } else {
-      message.error('获取仓库列表失败');
+    } catch {
+      // 全局请求拦截器会显示失败原因。
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchProject = async () => {
@@ -161,7 +163,7 @@ export const RepoPage: React.FC<RepoProps> = ({
       title: '下载数',
       dataIndex: 'pull_count',
       key: 'pull_count',
-      width: 250,
+      width: 130,
     },
     {
       title: '最近变更时间',
@@ -228,62 +230,63 @@ export const RepoPage: React.FC<RepoProps> = ({
   };
 
   return (
-    <Card>
-      <div
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Title level={2} style={{ margin: 0 }}>
-          {nameAlias}仓库管理
-        </Title>
+    <>
+      <PageHeading
+        eyebrow="ARTIFACTS / REPOSITORIES"
+        title={name === RepoType.Chart ? 'Helm 模板仓库' : '镜像仓库'}
+        description={
+          name === RepoType.Chart
+            ? '集中管理应用模板，为可重复的部署提供可靠基础。'
+            : '管理容器镜像与版本，构建可追溯的应用交付链路。'
+        }
+      />
+      <div className="ke-table-panel">
+        <div className="ke-toolbar">
+          <Input
+            aria-label="搜索仓库名称"
+            allowClear
+            placeholder="搜索仓库名称"
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ width: 300 }}
+          />
+
+          <Button
+            type="primary"
+            icon={<UploadOutlined />}
+            onClick={() => {
+              if (name === RepoType.Image) {
+                history.push('/artifacts/imageImports?create=1');
+                return;
+              }
+              setUploadModalVisible(true);
+            }}
+          >
+            {name === RepoType.Chart ? '上传 Helm 模板' : '导入镜像'}
+          </Button>
+        </div>
+
+        <Spin spinning={loading}>
+          <Table
+            dataSource={artifactRepositoryData}
+            columns={columns}
+            rowKey="id"
+            pagination={{
+              ...paginationParams, // 绑定受控的分页参数
+              showSizeChanger: true,
+              showTotal: (total) => `共 ${total} 个仓库`,
+              total: repo_count,
+              onChange: handleTableChange, // 分页变化回调
+            }}
+            scroll={{ x: 1100 }}
+            size="middle"
+            locale={{
+              emptyText: <Empty description="暂无仓库数据" />,
+            }}
+          />
+        </Spin>
       </div>
-
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
-        <Input
-          placeholder="搜索仓库名称"
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 300 }}
-        />
-
-        <Button
-          type="primary"
-          icon={<UploadOutlined />}
-          onClick={() => {
-            if (name === RepoType.Image) {
-              history.push('/artifacts/imageImports?create=1');
-              return;
-            }
-            setUploadModalVisible(true);
-          }}
-        >
-          {name === RepoType.Chart ? '上传Chart' : '上传镜像'}
-        </Button>
-      </div>
-
-      <Spin spinning={loading}>
-        <Table
-          dataSource={artifactRepositoryData}
-          columns={columns}
-          rowKey="id"
-          pagination={{
-            ...paginationParams, // 绑定受控的分页参数
-            showSizeChanger: true,
-            total: repo_count,
-            onChange: handleTableChange, // 分页变化回调
-          }}
-          scroll={{ x: 1100 }}
-          size="middle"
-          locale={{
-            emptyText: <Empty description="暂无仓库数据" />,
-          }}
-        />
-      </Spin>
-
       {/* 上传 Chart 弹窗；镜像上传由独立的镜像导入页面处理 */}
       {name === RepoType.Chart && (
         <Modal
@@ -310,6 +313,6 @@ export const RepoPage: React.FC<RepoProps> = ({
           </Text>
         </Modal>
       )}
-    </Card>
+    </>
   );
 };

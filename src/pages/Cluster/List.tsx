@@ -1,3 +1,4 @@
+import PageHeading from '@/components/PageHeading';
 import YamlDisplay from '@/components/YamlDisplay';
 import services from '@/services';
 import { getRelativeTime } from '@/utils/time';
@@ -129,18 +130,23 @@ const Cluster: React.FC = () => {
   const [count, setCount] = useState<number>(0);
   const getCluster = async () => {
     setLoading(true);
-    const { code, data } = await services.AppsController.cluster_list(
-      searchText,
-      paginationParams.pageSize,
-      paginationParams.current,
-    );
-    if (code === 200) {
-      setClusters(data.data);
-      setCount(data.total);
-    } else {
-      message.error('获取应用配置列表失败');
+    try {
+      const { code, data } = await services.AppsController.cluster_list(
+        searchText,
+        paginationParams.pageSize,
+        paginationParams.current,
+      );
+      if (code === 200) {
+        setClusters(data.data);
+        setCount(data.total);
+      } else {
+        message.error('获取应用配置列表失败');
+      }
+    } catch {
+      // 全局请求拦截器会显示失败原因。
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // 分页变化回调：获取并更新分页参数
@@ -185,13 +191,13 @@ const Cluster: React.FC = () => {
       width: 100,
     },
     {
-      title: 'helm chart模板名称',
+      title: 'Helm 模板',
       dataIndex: 'helm_chart',
       key: 'helm_chart',
       width: 100,
     },
     {
-      title: 'helm chart模板版本',
+      title: '模板版本',
       dataIndex: 'helm_chart_version',
       key: 'helm_chart_version',
       width: 100,
@@ -336,34 +342,51 @@ const Cluster: React.FC = () => {
   }, [searchText, paginationParams]);
 
   return (
-    <PageContainer>
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
-        <Input
-          placeholder="搜索集群名称"
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 300 }}
-        />
+    <PageContainer title={false} breadcrumbRender={false}>
+      <PageHeading
+        eyebrow="APPLICATIONS / CLUSTERS"
+        title="应用集群"
+        description="查看应用运行状态，管理部署实例及其 Kubernetes 资源。"
+        extra={
+          <Link to="/apps/store">
+            <Button type="primary">部署应用</Button>
+          </Link>
+        }
+      />
+      <div className="ke-table-panel">
+        <div className="ke-toolbar">
+          <Input
+            aria-label="搜索集群名称"
+            allowClear
+            placeholder="搜索集群名称"
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => {
+              setSearchText(e.target.value);
+              setPaginationParams((value) => ({ ...value, current: 1 }));
+            }}
+            style={{ width: 300 }}
+          />
+        </div>
+        <Spin spinning={loading}>
+          <Table<ClusterRecord>
+            dataSource={clusters}
+            columns={columns}
+            rowKey="cluster_id"
+            pagination={{
+              ...paginationParams, // 绑定受控的分页参数
+              showSizeChanger: true,
+              showTotal: (total) => `共 ${total} 个应用集群`,
+              total: count,
+              onChange: handleTableChange, // 分页变化回调
+            }}
+            scroll={{ x: 1100 }}
+            locale={{
+              emptyText: <Empty description="暂无集群" />,
+            }}
+          />
+        </Spin>
       </div>
-      <Spin spinning={loading}>
-        <Table<ClusterRecord>
-          dataSource={clusters}
-          columns={columns}
-          rowKey="cluster_id"
-          pagination={{
-            ...paginationParams, // 绑定受控的分页参数
-            showSizeChanger: true,
-            total: count,
-            onChange: handleTableChange, // 分页变化回调
-          }}
-          scroll={{ x: 1100 }}
-          locale={{
-            emptyText: <Empty description="暂无集群" />,
-          }}
-        />
-      </Spin>
-
       <Modal
         title="修改集群名称"
         open={visible}

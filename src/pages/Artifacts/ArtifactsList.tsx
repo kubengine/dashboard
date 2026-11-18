@@ -1,3 +1,4 @@
+import PageHeading from '@/components/PageHeading';
 import service from '@/services';
 import { formatBytes } from '@/utils/storage';
 import {
@@ -50,22 +51,27 @@ const ArtifactsList: React.FC = () => {
 
   const fetchArtifacts = async (current = 1, pageSize = 10) => {
     setLoading(true);
-    const { code, data } = await service.ArtifactsController.get_artifacts(
-      project_name || '',
-      encodeURIComponent(encodeURIComponent(repository_name || '')),
-      searchText ? `digest${encodeURIComponent('=')}~${searchText}` : '',
-      pageSize,
-      current,
-    );
-    if (code == 200) {
-      setData(data);
-      if (searchText) {
-        setCount(data.length);
+    try {
+      const { code, data } = await service.ArtifactsController.get_artifacts(
+        project_name || '',
+        encodeURIComponent(encodeURIComponent(repository_name || '')),
+        searchText ? `digest${encodeURIComponent('=')}~${searchText}` : '',
+        pageSize,
+        current,
+      );
+      if (code == 200) {
+        setData(data);
+        if (searchText) {
+          setCount(data.length);
+        }
+      } else {
+        message.error(`获取${project_name}仓库制品失败`);
       }
-    } else {
-      message.error(`获取${project_name}仓库制品失败`);
+    } catch {
+      // 全局请求拦截器会显示失败原因。
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
   const handleTableChange: PaginationProps['onChange'] = (
     current: number, // 当前页码
@@ -187,7 +193,7 @@ const ArtifactsList: React.FC = () => {
     });
   };
   const copyConfig = (record: any) => {
-    var configStr = '';
+    let configStr = '';
     if (record.type == 'CHART') {
       configStr = `helm pull oci://kubengine.io/${project_name}/${repository_name} --version ${record.extra_attrs.version}`;
     } else {
@@ -214,14 +220,14 @@ const ArtifactsList: React.FC = () => {
       });
   };
   const handleDelete = async (digest: string) => {
-    const { code, data } = await service.ArtifactsController.del_artifact(
+    const { code } = await service.ArtifactsController.del_artifact(
       project_name || '',
       encodeURIComponent(encodeURIComponent(repository_name || '')),
       digest || '',
     );
     if (code == 200) {
       message.success('制品删除成功');
-      fetchArtifacts()
+      fetchArtifacts();
     } else {
       message.error(`获取${project_name}仓库制品失败`);
     }
@@ -266,7 +272,7 @@ const ArtifactsList: React.FC = () => {
       ),
     },
     {
-      title: 'tags',
+      title: '标签',
       dataIndex: 'tags',
       key: 'tags',
       width: 150,
@@ -320,34 +326,43 @@ const ArtifactsList: React.FC = () => {
   ];
 
   return (
-    <PageContainer>
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
-        <Input
-          placeholder="搜索制品名称"
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 300 }}
-        />
+    <PageContainer title={false} breadcrumbRender={false}>
+      <PageHeading
+        eyebrow="ARTIFACTS / VERSIONS"
+        title={`${repository_name || '仓库'} · 制品版本`}
+        description="查看制品标签、摘要与推送时间，获取可追溯的部署版本。"
+      />
+      <div className="ke-table-panel">
+        <div className="ke-toolbar">
+          <Input
+            aria-label="搜索制品摘要"
+            allowClear
+            placeholder="搜索制品摘要"
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ width: 300 }}
+          />
+        </div>
+        <Spin spinning={loading}>
+          <Table
+            dataSource={data}
+            columns={columns}
+            rowKey="id"
+            pagination={{
+              ...paginationParams, // 绑定受控的分页参数
+              showSizeChanger: true,
+              total: count,
+              onChange: handleTableChange, // 分页变化回调
+            }}
+            scroll={{ x: 1100 }}
+            size="middle"
+            locale={{
+              emptyText: <Empty description="暂无制品数据" />,
+            }}
+          />
+        </Spin>
       </div>
-      <Spin spinning={loading}>
-        <Table
-          dataSource={data}
-          columns={columns}
-          rowKey="id"
-          pagination={{
-            ...paginationParams, // 绑定受控的分页参数
-            showSizeChanger: true,
-            total: count,
-            onChange: handleTableChange, // 分页变化回调
-          }}
-          scroll={{ x: 1100 }}
-          size="middle"
-          locale={{
-            emptyText: <Empty description="暂无制品数据" />,
-          }}
-        />
-      </Spin>
     </PageContainer>
   );
 };

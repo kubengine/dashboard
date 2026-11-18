@@ -1,3 +1,4 @@
+import PageHeading from '@/components/PageHeading';
 import Usage from '@/components/Usage';
 import { DataPoint2, KubernetesNodeDetail } from '@/components/data';
 import service from '@/services';
@@ -6,22 +7,17 @@ import { PageContainer } from '@ant-design/pro-components';
 import { useSearchParams } from '@umijs/max';
 import {
   Card,
-  Col,
   Descriptions,
   DescriptionsProps,
   message,
   Progress,
-  Row,
   Space,
   Table,
   Tag,
-  Typography,
 } from 'antd';
 import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 const { node } = service.KubernetesController;
-
-const { Title } = Typography;
 
 // 表格列配置
 const columns = [
@@ -41,7 +37,7 @@ const columns = [
     ),
   },
   {
-    title: '最后的检测时间',
+    title: '最后检测时间',
     dataIndex: 'lastProbeTime',
     key: 'lastProbeTime',
     width: 150,
@@ -50,7 +46,7 @@ const columns = [
     },
   },
   {
-    title: '最后的迁移时间',
+    title: '最后变更时间',
     dataIndex: 'lastTransitionTime',
     key: 'lastTransitionTime',
     width: 150,
@@ -91,7 +87,7 @@ const NodeDetailPage: React.FC = () => {
   >([]);
 
   // 获取路由参数
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const name = searchParams.get('name');
   useEffect(() => {
     const fetchData = async () => {
@@ -107,7 +103,7 @@ const NodeDetailPage: React.FC = () => {
       const cpu_usage_rate = metrics.find(
         (item: any) => item['metricName'] == 'cpu/usage_rate',
       );
-      var cpuUsageRate: DataPoint2[] = [];
+      let cpuUsageRate: DataPoint2[] = [];
       cpu_usage_rate['dataPoints'].forEach((item: any) => {
         cpuUsageRate.push({
           x: dayjs(item.x * 1000).format('HH:mm'),
@@ -119,7 +115,7 @@ const NodeDetailPage: React.FC = () => {
       const memory_usage = metrics.find(
         (item: any) => item['metricName'] == 'memory/usage',
       );
-      var memoryUsageRate: DataPoint2[] = [];
+      let memoryUsageRate: DataPoint2[] = [];
       memory_usage['dataPoints'].forEach((item: any) => {
         memoryUsageRate.push({
           x: dayjs(item.x * 1000).format('HH:mm'),
@@ -130,23 +126,23 @@ const NodeDetailPage: React.FC = () => {
       setMemoryUsage(memoryUsageRate);
       const objectMeta = data['objectMeta'];
       SetMetadataDescriptions([
-        { key: '1', label: 'Name', children: objectMeta['name'] },
+        { key: '1', label: '节点名称', children: objectMeta['name'] },
         {
           key: '2',
-          label: 'Created',
+          label: '创建时间',
           children: dayjs(objectMeta['creationTimestamp']).format(
             'YYYY-MM-DD HH:mm:ss',
           ),
         },
         {
           key: '6',
-          label: 'Age',
+          label: '运行时长',
           children: getRelativeTime(objectMeta['creationTimestamp']),
         },
         { key: '3', label: 'UID', children: objectMeta['uid'] },
         {
           key: '4',
-          label: 'Labels',
+          label: '标签',
           children: (
             <Space wrap>
               {Object.entries(objectMeta.labels).map(([key, value]) => (
@@ -205,7 +201,7 @@ const NodeDetailPage: React.FC = () => {
           label: '内核版本',
           children: nodeInfo['kernelVersion'],
         },
-        { key: '5', label: 'OS Image', children: nodeInfo['osImage'] },
+        { key: '5', label: '操作系统镜像', children: nodeInfo['osImage'] },
         {
           key: '6',
           label: '容器运行时版本',
@@ -247,7 +243,7 @@ const NodeDetailPage: React.FC = () => {
       SetAllocatedDescriptions([
         {
           key: '1',
-          label: `CPU Requests(Cores: ${(
+          label: `CPU 请求（核： ${(
             allocatedDescriptions['cpuRequests'] / 1000
           ).toFixed(2)})`,
           children: (
@@ -267,7 +263,7 @@ const NodeDetailPage: React.FC = () => {
         },
         {
           key: '2',
-          label: `CPU Limits(Cores: ${(
+          label: `CPU 限制（核： ${(
             allocatedDescriptions['cpuLimits'] / 1000
           ).toFixed(2)})`,
           children: (
@@ -287,7 +283,7 @@ const NodeDetailPage: React.FC = () => {
         },
         {
           key: '3',
-          label: `Memory Requests(GiB: ${(
+          label: `内存请求（GiB： ${(
             allocatedDescriptions['memoryRequests'] /
             1024 /
             1024 /
@@ -310,7 +306,7 @@ const NodeDetailPage: React.FC = () => {
         },
         {
           key: '4',
-          label: `Memory Limits(GiB: ${(
+          label: `内存限制（GiB： ${(
             allocatedDescriptions['memoryLimits'] /
             1024 /
             1024 /
@@ -354,84 +350,70 @@ const NodeDetailPage: React.FC = () => {
     fetchData();
   }, [name]);
   return (
-    <PageContainer>
-      <div
-        style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}
-      >
-        <Card>
-          <Title level={2} style={{ marginBottom: '24px' }}>
-            节点详情: {nodeData?.objectMeta.name}
-          </Title>
-          <Row gutter={24} style={{ marginBottom: '24px' }}>
-            <Col span={12}>
-              <Usage
-                loading={loading}
-                dataSource={cpuUsageRate}
-                title="CPU Usage"
-                yTitle="CPU (cores)"
-                unit="CPU"
-              />
-            </Col>
-            <Col span={12}>
-              <Usage
-                loading={loading}
-                dataSource={memoryUsage}
-                title="Memory Usage"
-                yTitle="Memory (bytes)"
-                styleFill="l(270) 0:#ffffff 0.2:#7ec2f3 1:#1890ff"
-                unit="Gi"
-              />
-            </Col>
-          </Row>
-          <Card style={{ marginBottom: '24px' }}>
-            <Descriptions
-              column={4}
-              title="Metadata"
-              layout="vertical"
-              bordered={true}
-              items={metadataDescriptions}
-            />
-          </Card>
-          <Card style={{ marginBottom: '24px' }}>
-            <Descriptions
-              column={4}
-              title="资源信息"
-              layout="vertical"
-              bordered={true}
-              items={resourceDescriptions}
-            />
-          </Card>
-          <Card style={{ marginBottom: '24px' }}>
-            <Descriptions
-              column={4}
-              title="系统信息"
-              layout="vertical"
-              bordered={true}
-              items={systemDescriptions}
-            />
-          </Card>
-          <Card style={{ marginBottom: '24px' }}>
-            <Descriptions
-              column={5}
-              title="分配"
-              // layout="vertical"
-              bordered={true}
-              items={allocatedDescriptions}
-            />
-          </Card>
-          <Card style={{ marginBottom: '24px' }} title="状况">
-            <Table
-              columns={columns}
-              dataSource={nodeData?.conditions}
-              pagination={false}
-              size="middle"
-              scroll={{ x: 800 }}
-            />
-          </Card>
+    <PageContainer title={false} breadcrumbRender={false}>
+      <PageHeading
+        eyebrow="INFRASTRUCTURE / NODE"
+        title={`节点详情 · ${name || '—'}`}
+        description="查看节点的资源使用、分配情况与运行条件。"
+      />
+      <div className="ke-chart-grid">
+        <Usage
+          loading={loading}
+          dataSource={cpuUsageRate}
+          title="CPU 使用趋势"
+          yTitle="核"
+          unit="核"
+        />
+        <Usage
+          loading={loading}
+          dataSource={memoryUsage}
+          title="内存使用趋势"
+          yTitle="GiB"
+          unit="GiB"
+          styleFill="#14a89a"
+        />
+      </div>
+      <div className="ke-detail-stack">
+        <Card title="节点元数据" loading={loading}>
+          <Descriptions
+            column={{ xs: 1, sm: 2, lg: 3 }}
+            layout="vertical"
+            items={metadataDescriptions}
+          />
+        </Card>
+        <Card title="资源信息" loading={loading}>
+          <Descriptions
+            column={{ xs: 1, sm: 2, lg: 3 }}
+            layout="vertical"
+            items={resourceDescriptions}
+          />
+        </Card>
+        <Card title="系统信息" loading={loading}>
+          <Descriptions
+            column={{ xs: 1, sm: 2, lg: 3 }}
+            layout="vertical"
+            items={systemDescriptions}
+          />
+        </Card>
+        <Card title="资源分配" loading={loading}>
+          <Descriptions
+            column={{ xs: 1, sm: 2, lg: 3, xl: 5 }}
+            layout="vertical"
+            items={allocatedDescriptions}
+          />
+        </Card>
+        <Card title="节点状况" loading={loading}>
+          <Table
+            rowKey="type"
+            columns={columns}
+            dataSource={nodeData?.conditions}
+            pagination={false}
+            size="middle"
+            scroll={{ x: 1000 }}
+          />
         </Card>
       </div>
     </PageContainer>
   );
 };
-
 export default NodeDetailPage;

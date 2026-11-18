@@ -5,7 +5,6 @@ import { message } from 'antd';
 import React, { useEffect, useState } from 'react';
 import ConfigAndPVC from './components/ConfigAndPVC';
 import Networking from './components/Networking';
-import Other from './components/Other';
 import Workload from './components/Workload';
 
 const ClusterDetail: React.FC = () => {
@@ -42,7 +41,8 @@ const ClusterDetail: React.FC = () => {
 
   return (
     <PageContainer
-      // fixedHeader
+      title={name ? `应用集群 · ${name}` : '应用集群详情'}
+      subTitle="工作负载、网络与存储资源"
       loading={loading}
       header={{
         breadcrumb: {},
@@ -68,20 +68,7 @@ const ClusterDetail: React.FC = () => {
         // },
       ]}
     >
-      <div
-        style={{
-          // 核心：开启垂直滚动
-          overflowY: 'auto',
-          // 关键：设置高度约束（两种方案可选）
-          // 方案 A：固定最大高度（适合普通场景）
-          maxHeight: 'calc(100vh - 200px)', // 100vh 视口高度 - 页头/标签栏高度（按需调整）
-          // 方案 B：全屏剩余高度（适合需要占满视口的场景）
-          // height: 'calc(100vh - 200px)',
-          // 可选：优化滚动体验
-          padding: 16,
-          boxSizing: 'border-box',
-        }}
-      >
+      <div>
         {activeTabKey === '1' && <Workload name={name} />}
         {activeTabKey === '2' && <Networking name={name} />}
         {activeTabKey === '3' && <ConfigAndPVC name={name} />}

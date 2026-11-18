@@ -5,7 +5,14 @@ import type {
 } from '@umijs/max';
 import { history } from '@umijs/max';
 import { notification } from 'antd';
-import { createElement } from 'react';
+import type { HTMLAttributes, KeyboardEvent } from 'react';
+import { cloneElement, createElement, isValidElement } from 'react';
+import Brand from './components/Brand';
+import {
+  ConsoleFooter,
+  ConsoleHeader,
+  WorkspaceLabel,
+} from './components/ConsoleChrome';
 import { logout } from './services/UserController';
 import {
   clearAuthStore,
@@ -34,7 +41,7 @@ const requestBearer = (config: any): string => {
 export async function getInitialState() {
   const store = getAuthStore();
   return {
-    avatar: '/assets/logo.png',
+    avatar: '/assets/kubeengine-mark.svg',
     user: {
       authType: 'token' as const,
       tokenExpiresAt: store.token?.expiresAt || '',
@@ -46,37 +53,8 @@ export async function getInitialState() {
 export const layout: RunTimeLayoutConfig = ({
   initialState,
   setInitialState,
-}) => ({
-  title: false,
-  logo: '/assets/logo-v2.png',
-  menuHeaderRender: (_logo, _title, props) =>
-    createElement('img', {
-      src: props?.collapsed ? '/assets/logo.png' : '/assets/logo-v2.png',
-      alt: 'KubeEngine',
-      className: props?.collapsed
-        ? 'kubeengine-sider-brand kubeengine-sider-brand-collapsed'
-        : 'kubeengine-sider-brand',
-    }),
-  onPageChange: () => {
-    if (history.location.pathname === loginPath) return;
-    if (isTokenExpired()) {
-      clearAuthStore();
-      redirectToLogin();
-      return;
-    }
-    const store = getAuthStore();
-    if (initialState?.user.accessToken !== store.token?.accessToken) {
-      setInitialState({
-        avatar: initialState?.avatar || '/assets/logo.png',
-        user: {
-          authType: 'token',
-          tokenExpiresAt: store.token?.expiresAt || '',
-          accessToken: store.token?.accessToken || '',
-        },
-      });
-    }
-  },
-  async logout() {
+}) => {
+  const handleLogout = async () => {
     try {
       await endSession((bearer) => logout(bearer));
     } catch (error: any) {
@@ -93,8 +71,102 @@ export const layout: RunTimeLayoutConfig = ({
         redirectToLogin();
       }
     }
-  },
-});
+  };
+  return {
+    title: false,
+    logo: '/assets/kubeengine-mark.svg',
+    layout: 'side',
+    navTheme: 'light',
+    siderWidth: 232,
+    headerHeight: 64,
+    contentWidth: 'Fluid',
+    menu: { defaultOpenAll: true, ignoreFlatMenu: true },
+    collapsedButtonRender: (collapsed, dom) =>
+      isValidElement<HTMLAttributes<HTMLElement>>(dom)
+        ? cloneElement(dom, {
+            role: 'button',
+            tabIndex: 0,
+            'aria-label': collapsed ? '展开导航' : '折叠导航',
+            'aria-expanded': !collapsed,
+            onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.currentTarget.click();
+              }
+            },
+          })
+        : dom,
+    headerRender: (props) =>
+      createElement(ConsoleHeader, {
+        onLogout: handleLogout,
+        onToggleMenu: () => props.onCollapse?.(!props.collapsed),
+      }),
+    rightContentRender: false,
+    menuExtraRender: (props) =>
+      createElement(WorkspaceLabel, { collapsed: props?.collapsed }),
+    menuFooterRender: (props) =>
+      createElement(ConsoleFooter, { collapsed: props?.collapsed }),
+    token: {
+      bgLayout: '#f4f7fb',
+      sider: {
+        colorMenuBackground: '#101e34',
+        colorTextMenu: '#aebdd2',
+        colorTextMenuSecondary: '#aebdd2',
+        colorTextMenuSelected: '#ffffff',
+        colorBgMenuItemSelected: '#253e64',
+        colorBgMenuItemHover: '#1a304d',
+        colorTextMenuActive: '#ffffff',
+        colorBgCollapsedButton: '#ffffff',
+        colorTextCollapsedButton: '#596b83',
+      },
+      pageContainer: {
+        paddingInlinePageContainerContent: 0,
+        paddingBlockPageContainerContent: 0,
+      },
+    },
+    menuHeaderRender: (_logo, _title, props) =>
+      createElement(
+        'a',
+        { href: '/home', 'aria-label': '返回资源总览' },
+        createElement(Brand, { collapsed: props?.collapsed, light: true }),
+      ),
+    childrenRender: (children) =>
+      createElement(
+        'div',
+        { className: 'ke-workbench' },
+        createElement(
+          'div',
+          { className: 'ke-desktop-header' },
+          createElement(ConsoleHeader, { onLogout: handleLogout }),
+        ),
+        createElement(
+          'div',
+          { id: 'ke-main', className: 'ke-main', tabIndex: -1 },
+          children,
+        ),
+      ),
+    onPageChange: () => {
+      if (history.location.pathname === loginPath) return;
+      if (isTokenExpired()) {
+        clearAuthStore();
+        redirectToLogin();
+        return;
+      }
+      const store = getAuthStore();
+      if (initialState?.user.accessToken !== store.token?.accessToken) {
+        setInitialState({
+          avatar: initialState?.avatar || '/assets/kubeengine-mark.svg',
+          user: {
+            authType: 'token',
+            tokenExpiresAt: store.token?.expiresAt || '',
+            accessToken: store.token?.accessToken || '',
+          },
+        });
+      }
+    },
+    logout: handleLogout,
+  };
+};
 
 export const request: RequestConfig = {
   requestInterceptors: [

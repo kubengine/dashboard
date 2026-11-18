@@ -1,3 +1,4 @@
+import PageHeading from '@/components/PageHeading';
 import services from '@/services';
 import { App } from '@/services/AppController';
 import { getRelativeTime } from '@/utils/time';
@@ -47,6 +48,27 @@ const Config: React.FC = () => {
     app_field_configs: [],
   });
 
+  const getConfig = async () => {
+    setLoading(true);
+    try {
+      const { code, data } = await services.AppsController.list(
+        searchText,
+        paginationParams.pageSize,
+        paginationParams.current,
+      );
+      if (code == 200) {
+        setData(data.data);
+        setCount(data.total);
+      } else {
+        message.error('获取应用配置列表失败');
+      }
+    } catch {
+      // 全局请求拦截器会显示失败原因。
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const removeApp = async (app_id: number) => {
     setLoading(true);
     const { code } = await services.AppsController.del(app_id);
@@ -85,7 +107,9 @@ const Config: React.FC = () => {
       render: (category: string[]) => (
         <>
           {category.map((item) => (
-            <Tag color={'cyan'}>{item}</Tag>
+            <Tag key={item} color={'cyan'}>
+              {item}
+            </Tag>
           ))}
         </>
       ),
@@ -107,7 +131,7 @@ const Config: React.FC = () => {
       title: '操作',
       key: 'action',
       width: 200,
-      render: (_: any, record: App, index: number) => (
+      render: (_: any, record: App) => (
         <Space size="middle">
           <Button
             type="text"
@@ -144,21 +168,6 @@ const Config: React.FC = () => {
       ),
     },
   ];
-  const getConfig = async () => {
-    setLoading(true);
-    const { code, data } = await services.AppsController.list(
-      searchText,
-      paginationParams.pageSize,
-      paginationParams.current,
-    );
-    if (code == 200) {
-      setData(data.data);
-      setCount(data.total);
-    } else {
-      message.error('获取应用配置列表失败');
-    }
-    setLoading(false);
-  };
 
   useEffect(() => {
     getConfig();
@@ -174,46 +183,60 @@ const Config: React.FC = () => {
   };
 
   return (
-    <PageContainer title="应用配置">
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
-        <Input
-          placeholder="搜索应用名称"
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 300 }}
-        />
+    <PageContainer title={false} breadcrumbRender={false}>
+      <PageHeading
+        eyebrow="APPLICATIONS / CONFIGURATION"
+        title="应用配置"
+        description="维护应用定义、部署参数与 Helm 模板，统一交付标准。"
+      />
+      <div className="ke-table-panel">
+        <div className="ke-toolbar">
+          <Input
+            aria-label="搜索应用名称"
+            allowClear
+            placeholder="搜索应用名称"
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => {
+              setSearchText(e.target.value);
+              setPaginationParams((value) => ({ ...value, current: 1 }));
+            }}
+            style={{ width: 300 }}
+          />
 
-        <Button
-          type="primary"
-          icon={<UploadOutlined />}
-          onClick={() => history.push('/apps/editor')}
-        >
-          注册应用
-        </Button>
+          <Button
+            type="primary"
+            icon={<UploadOutlined />}
+            onClick={() => history.push('/apps/editor')}
+          >
+            注册应用
+          </Button>
+        </div>
+        <Spin spinning={loading}>
+          <Table
+            dataSource={data}
+            columns={columns}
+            rowKey="app_id"
+            pagination={{
+              ...paginationParams, // 绑定受控的分页参数
+              showSizeChanger: true,
+              showTotal: (total) => `共 ${total} 个应用`,
+              total: count,
+              onChange: handleTableChange, // 分页变化回调
+            }}
+            scroll={{ x: 1100 }}
+            locale={{
+              emptyText: <Empty description="暂无应用" />,
+            }}
+          />
+        </Spin>
       </div>
-      <Spin spinning={loading}>
-        <Table
-          dataSource={data}
-          columns={columns}
-          rowKey="id"
-          pagination={{
-            ...paginationParams, // 绑定受控的分页参数
-            showSizeChanger: true,
-            total: count,
-            onChange: handleTableChange, // 分页变化回调
-          }}
-          scroll={{ x: 1100 }}
-          locale={{
-            emptyText: <Empty description="暂无应用" />,
-          }}
-        />
-      </Spin>
       <Drawer
         size="large"
         placement="right"
         mask={true}
-        closable={false}
+        title={`${showApp.name} · 部署配置预览`}
+        closable
         onClose={() => setOpen(false)}
         open={open}
       >

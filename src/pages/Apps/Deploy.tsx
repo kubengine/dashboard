@@ -1,3 +1,4 @@
+import PageHeading from '@/components/PageHeading';
 import services from '@/services';
 import { App } from '@/services/AppController';
 import { deploymentSubmission } from '@/utils/deploymentSubmission';
@@ -20,11 +21,18 @@ const Deploy: React.FC = () => {
   });
   const getConfig = async () => {
     setLoading(true);
-    const { code, data } = await services.AppsController.get_app_by_id(app_id);
-    if (code === 200) {
-      setApp(data);
+    try {
+      const { code, data } = await services.AppsController.get_app_by_id(
+        app_id,
+      );
+      if (code === 200) {
+        setApp(data);
+      }
+    } catch {
+      // 全局请求拦截器会显示失败原因。
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
   useEffect(() => {
     getConfig();
@@ -52,7 +60,12 @@ const Deploy: React.FC = () => {
     return pending;
   };
   return (
-    <PageContainer loading={loading}>
+    <PageContainer loading={loading} title={false} breadcrumbRender={false}>
+      <PageHeading
+        eyebrow="APPLICATIONS / DEPLOYMENT"
+        title={`部署 ${app.name || '应用'}`}
+        description="选择模板版本并确认部署参数，创建您的应用实例。"
+      />
       <AppConfigForm
         app={app}
         submit={(val) => {

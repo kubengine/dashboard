@@ -97,24 +97,29 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
           />
         );
 
-      case 'switch':
-        const {
-          placeholder,
-          prefix,
-          allowClear,
-          showCount,
-          min,
-          max,
-          step,
-          options,
-          selectMode,
-          uploadAction,
-          accept,
-          variant,
-          checkboxOptions,
-          ...switchProps
-        } = field_props;
+      case 'switch': {
+        const unsupportedProps = new Set([
+          'placeholder',
+          'prefix',
+          'allowClear',
+          'showCount',
+          'min',
+          'max',
+          'step',
+          'options',
+          'selectMode',
+          'uploadAction',
+          'accept',
+          'variant',
+          'checkboxOptions',
+        ]);
+        const switchProps = Object.fromEntries(
+          Object.entries(field_props).filter(
+            ([key]) => !unsupportedProps.has(key),
+          ),
+        );
         return <Switch {...switchProps} />;
+      }
 
       default:
         return null;
@@ -125,7 +130,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
     <Form form={form} layout="horizontal" {...formProps}>
       {fields.map((field) => (
         <Form.Item
-          key={field.field_id}
+          key={field.field_id || field.name}
           name={field.name}
           label={field.label}
           rules={field.rules}

@@ -1,6 +1,7 @@
 import services from '@/services';
 import { App, AppFieldConfig } from '@/services/AppController';
 import { ProCard } from '@ant-design/pro-components';
+import { history } from '@umijs/max';
 import { Button, Divider, Form, Space } from 'antd';
 import { useEffect, useState } from 'react';
 import DynamicForm from './DynamicForm';
@@ -134,7 +135,7 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
     },
     {
       name: 'name',
-      label: 'name',
+      label: '应用名称',
       type: 'text',
       initial_value: app.name,
       extra: '应用服务的名称',
@@ -149,7 +150,7 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
     },
     {
       name: 'helm_chart_version',
-      label: 'version',
+      label: '模板版本',
       type: 'select',
       order: 3,
       extra: '选择部署使用的helm模板版本',
@@ -164,15 +165,17 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
     <>
       <ProCard
         loading={loading}
-        title="第 1 步: 基本设置"
+        title="01 · 基本设置"
         extra={
-          <a
+          <Button
+            type="link"
+            size="small"
             onClick={() =>
               setCollapseds((prev) => ({ ...prev, basic: !prev.basic }))
             }
           >
             {collapseds.basic ? '展开配置' : '收起配置'}
-          </a>
+          </Button>
         }
         style={{ marginBlockStart: 16 }}
         headerBordered
@@ -188,16 +191,18 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
         />
       </ProCard>
       <ProCard
-        title="第 2 步: 集群规格"
+        title="02 · 集群规格"
         loading={loading}
         extra={
-          <a
+          <Button
+            type="link"
+            size="small"
             onClick={() =>
               setCollapseds((prev) => ({ ...prev, cluster: !prev.cluster }))
             }
           >
             {collapseds.cluster ? '展开配置' : '收起配置'}
-          </a>
+          </Button>
         }
         style={{ marginBlockStart: 16 }}
         headerBordered
@@ -219,16 +224,18 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
         />
       </ProCard>
       <ProCard
-        title="第 3 步: 服务环境参数设置"
+        title="03 · 环境参数"
         loading={loading}
         extra={
-          <a
+          <Button
+            type="link"
+            size="small"
             onClick={() =>
               setCollapseds((prev) => ({ ...prev, env: !prev.env }))
             }
           >
             {collapseds.env ? '展开配置' : '收起配置'}
-          </a>
+          </Button>
         }
         style={{ marginBlockStart: 16 }}
         headerBordered
@@ -260,9 +267,11 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
               onClick={handleSubmit}
               loading={loading}
             >
-              提交
+              确认部署
             </Button>
-            <Button size="large">取消</Button>
+            <Button size="large" onClick={() => history.push('/apps/store')}>
+              取消
+            </Button>
           </Space>
         </>
       ) : (

@@ -1,7 +1,10 @@
 import { defineConfig } from '@umijs/max';
+import { consoleTheme } from './src/theme';
 
 export default defineConfig({
-  antd: {},
+  antd: { theme: consoleTheme },
+  title: 'KubeEngine',
+  favicons: ['/assets/kubeengine-mark.svg'],
   access: {},
   model: {},
   initialState: {},
@@ -23,7 +26,7 @@ export default defineConfig({
     },
     { path: '/', redirect: '/home' },
     {
-      name: '总览',
+      name: '资源总览',
       icon: 'dashboard',
       path: '/home',
       component: '@/pages/Home',
@@ -50,7 +53,7 @@ export default defineConfig({
           component: '@/pages/Artifacts/ImageImports',
         },
         {
-          name: 'Helm模板仓库',
+          name: 'Helm 模板仓库',
           path: '/artifacts/chartsRepo',
           component: '@/pages/Artifacts/HelmChartsRepo',
         },
@@ -125,7 +128,7 @@ export default defineConfig({
   npmClient: 'pnpm',
   proxy: {
     '/api': {
-      target: 'http://172.31.57.23:8080/',
+      target: process.env.KUBENGINE_API_TARGET || 'http://172.31.57.23:8080/',
       changeOrigin: true,
       ws: true,
       // 'pathRewrite': { '^/api' : '' },

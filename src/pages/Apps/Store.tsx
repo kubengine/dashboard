@@ -1,170 +1,241 @@
+import PageHeading from '@/components/PageHeading';
 import services from '@/services';
 import { App } from '@/services/AppController';
 import {
   AppstoreOutlined,
+  ArrowRightOutlined,
   DatabaseOutlined,
+  DeploymentUnitOutlined,
   MessageOutlined,
+  PlusOutlined,
+  SearchOutlined,
   ToolOutlined,
 } from '@ant-design/icons';
-import { PageContainer } from '@ant-design/pro-components';
-import { history } from '@umijs/max';
+import { history, Link } from '@umijs/max';
 import {
+  Alert,
+  Button,
   Card,
-  Col,
-  Divider,
   Empty,
-  message,
+  Input,
   Pagination,
-  Row,
-  Space,
-  Tooltip,
+  Skeleton,
+  Tag,
 } from 'antd';
 import { useEffect, useState } from 'react';
 
-const { Meta } = Card;
-const Store: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState('全部应用');
-  const [apps, setApps] = useState<App[]>([]);
-  const [total, setTotal] = useState<number>(0);
-  const [paginationParams, setPaginationParams] = useState<{
-    current: number;
-    pageSize: number;
-  }>({
-    current: 1,
-    pageSize: 10,
-  });
-  const getConfig = async () => {
-    const category = activeCategory === '全部应用' ? '' : activeCategory;
-    const { code, data } = await services.AppsController.list(
-      '',
-      paginationParams.pageSize,
-      paginationParams.current,
-      category,
-    );
-    if (code == 200) {
-      setApps(data.data);
-      setTotal(data.total);
-    } else {
-      message.error('获取应用信息失败');
-    }
-  };
-  useEffect(() => {
-    getConfig();
-  }, [paginationParams, activeCategory]);
-  // 分类数据
-  const categories = [
-    { key: '全部应用', label: '全部应用', icon: <AppstoreOutlined /> },
-    { key: '数据库', label: '数据库', icon: <DatabaseOutlined /> },
-    { key: '消息与集成', label: '消息与集成', icon: <MessageOutlined /> },
-    { key: '应用支撑', label: '应用支撑', icon: <ToolOutlined /> },
-  ];
-  const AppCover: React.FC<{ app_name: string }> = ({ app_name }) => {
-    const [imgError, setImgError] = useState(false);
-    if (!app_name || imgError) {
-      return <div style={{ width: '100%', height: 215 }} />;
-    }
-    return (
-      <img
-        draggable={false}
-        alt={app_name}
-        src={`/app_logo/${app_name.toLowerCase()}_logo.png`}
-        onError={() => setImgError(true)}
-        style={{ width: '100%', height: 215 }}
-      />
-    );
-  };
-
+const categories = [
+  { key: '', label: '全部应用', icon: <AppstoreOutlined aria-hidden="true" /> },
+  {
+    key: '数据库',
+    label: '数据库',
+    icon: <DatabaseOutlined aria-hidden="true" />,
+  },
+  {
+    key: '消息与集成',
+    label: '消息与集成',
+    icon: <MessageOutlined aria-hidden="true" />,
+  },
+  {
+    key: '应用支撑',
+    label: '应用支撑',
+    icon: <ToolOutlined aria-hidden="true" />,
+  },
+];
+const AppIcon: React.FC<{ name: string }> = ({ name }) => {
+  const [failed, setFailed] = useState(false);
   return (
-    <PageContainer>
-      <Row gutter={24} style={{ marginBottom: '24px' }}>
-        {categories.map((category) => (
-          <Col span={4}>
-            <Card
-              onClick={() => {
-                setActiveCategory(category.key);
-                setPaginationParams((prev) => ({ ...prev, current: 1 }));
-              }}
-              style={
-                category.key == activeCategory
-                  ? {
-                      textAlign: 'center',
-                      fontSize: 'large',
-                      backgroundColor: '#e6f7ff',
-                    }
-                  : {
-                      textAlign: 'center',
-                      fontSize: 'large',
-                    }
-              }
-              hoverable={true}
-            >
-              {category.label}
-              {category.icon}
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      <Divider />
-
-      {/* 应用卡片 */}
-      {apps.length == 0 ? (
-        <Col span={24} key={'empty'}>
-          <Empty image={Empty.PRESENTED_IMAGE_DEFAULT} />
-        </Col>
+    <span className="ke-app-icon">
+      {failed ? (
+        <AppstoreOutlined aria-hidden="true" />
       ) : (
-        <Space wrap={true}>
-          {apps.map((app) => (
-            <Card
-              style={{ width: 300, height: 360 }}
-              cover={<AppCover app_name={app.name} />}
-              actions={[
-                <a onClick={() => history.push(`/apps/deploy/${app.app_id}`)}>
-                  立即部署
-                </a>,
-              ]}
-            >
-              <Meta
-                style={{ textAlign: 'center' }}
-                title={app.name}
-                description={
-                  <Tooltip title={app.description} placement="top">
-                    <div
-                      style={{
-                        whiteSpace: 'nowrap', // 强制单行
-                        overflow: 'hidden', // 超出隐藏
-                        textOverflow: 'ellipsis', // 超出显示省略号
-                        maxWidth: '100%', // 适配 Card 宽度（关键，避免省略失效）
-                        cursor: 'pointer', // 鼠标 hover 显示手型，提示可查看
-                      }}
-                    >
-                      {app.description}
-                    </div>
-                  </Tooltip>
-                }
-              />
-            </Card>
-          ))}
-        </Space>
+        <img
+          src={`/app_logo/${name.toLowerCase()}_logo.png`}
+          alt=""
+          width={36}
+          height={36}
+          onError={() => setFailed(true)}
+        />
       )}
-      <Divider />
-      <Pagination
-        style={{
-          border: '2px dashed #ccc',
-          padding: '8px',
-          marginBottom: 16,
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-        {...paginationParams}
-        hideOnSinglePage={true}
-        total={total}
-        onChange={(current, pageSize) =>
-          setPaginationParams({ current, pageSize })
-        }
-      />
-    </PageContainer>
+    </span>
   );
 };
-
+const Store: React.FC = () => {
+  const [activeCategory, setActiveCategory] = useState('');
+  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
+  const [apps, setApps] = useState<App[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 12 });
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setQuery(search.trim());
+      setPagination((value) => ({ ...value, current: 1 }));
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setFailed(false);
+    services.AppsController.list(
+      query,
+      pagination.pageSize,
+      pagination.current,
+      activeCategory,
+    )
+      .then(({ code, data }) => {
+        if (code != 200) throw new Error('加载失败');
+        if (active) {
+          setApps(data.data || []);
+          setTotal(data.total || 0);
+        }
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [pagination, query, activeCategory, revision]);
+  return (
+    <>
+      <PageHeading
+        eyebrow="APPLICATIONS / CATALOG"
+        title="应用库"
+        description="发现经过配置的云原生应用，从选择到部署，一步开启。"
+        extra={
+          <Button
+            icon={<PlusOutlined aria-hidden="true" />}
+            onClick={() => history.push('/apps/editor')}
+          >
+            注册应用
+          </Button>
+        }
+      />
+      <div className="ke-hero-note">
+        <DeploymentUnitOutlined aria-hidden="true" />
+        <span>标准 Helm 模板与可视化参数配置，让应用部署更简单。</span>
+        <Link to="/apps/cluster">
+          管理已部署应用 <ArrowRightOutlined aria-hidden="true" />
+        </Link>
+      </div>
+      <div className="ke-catalog-controls">
+        <div className="ke-catalog-tabs" role="group" aria-label="应用分类">
+          {categories.map((category) => (
+            <button
+              type="button"
+              key={category.key}
+              className="ke-category"
+              aria-pressed={category.key === activeCategory}
+              onClick={() => {
+                setActiveCategory(category.key);
+                setPagination((value) => ({ ...value, current: 1 }));
+              }}
+            >
+              {category.icon}
+              {category.label}
+            </button>
+          ))}
+        </div>
+        <Input
+          aria-label="搜索应用"
+          placeholder="搜索应用名称"
+          prefix={<SearchOutlined aria-hidden="true" />}
+          allowClear
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </div>
+      {failed ? (
+        <Alert
+          type="error"
+          showIcon
+          message="应用列表加载失败"
+          action={
+            <Button
+              size="small"
+              onClick={() => setRevision((value) => value + 1)}
+            >
+              重试
+            </Button>
+          }
+        />
+      ) : loading ? (
+        <div className="ke-catalog-grid">
+          {[1, 2, 3, 4, 5, 6].map((key) => (
+            <Card key={key}>
+              <Skeleton active avatar paragraph={{ rows: 3 }} />
+            </Card>
+          ))}
+        </div>
+      ) : apps.length ? (
+        <div className="ke-catalog-grid">
+          {apps.map((app) => (
+            <Card key={app.app_id} className="ke-app-card">
+              <div className="ke-app-identity">
+                <AppIcon name={app.name} />
+                <div>
+                  <h2>{app.name}</h2>
+                  <div className="ke-app-type">HELM APPLICATION</div>
+                </div>
+              </div>
+              <p className="ke-app-description">
+                {app.description || '通过 Helm 模板部署和管理应用。'}
+              </p>
+              <div className="ke-app-footer">
+                <span>
+                  {app.category?.map((category) => (
+                    <Tag key={category}>{category}</Tag>
+                  ))}
+                </span>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => history.push(`/apps/deploy/${app.app_id}`)}
+                  aria-label={`部署 ${app.name}`}
+                >
+                  部署应用 <ArrowRightOutlined aria-hidden="true" />
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              query || activeCategory
+                ? '没有匹配的应用，请调整搜索条件'
+                : '暂无应用，请先注册应用'
+            }
+          />
+        </Card>
+      )}
+      {!failed && (
+        <div className="ke-catalog-pagination">
+          <span role="status">
+            共 {total} 个应用{activeCategory && ` · ${activeCategory}`}
+          </span>
+          <Pagination
+            current={pagination.current}
+            pageSize={pagination.pageSize}
+            total={total}
+            showSizeChanger={false}
+            onChange={(current) =>
+              setPagination((value) => ({ ...value, current }))
+            }
+          />
+        </div>
+      )}
+    </>
+  );
+};
 export default Store;
