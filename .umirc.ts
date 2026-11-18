@@ -32,6 +32,22 @@ export default defineConfig({
       component: '@/pages/Home',
     },
     {
+      name: '资源中心',
+      icon: 'database',
+      path: '/resources',
+      component: '@/pages/Resources',
+    },
+    {
+      path: '/resources/:type',
+      component: '@/pages/Resources',
+      hideInMenu: true,
+    },
+    {
+      path: '/resources/:type/:namespace/:name',
+      component: '@/pages/Resources/Detail',
+      hideInMenu: true,
+    },
+    {
       name: '节点信息',
       path: '/nodeDetail',
       component: '@/pages/Home/nodeDetail',
@@ -135,5 +151,11 @@ export default defineConfig({
     },
   },
   mfsu: true,
+  // 使用官方 CommonJS 入口，避免当前 Webpack 对 xterm ESM 继承链的错误摇树。
+  alias: {
+    '@xterm/xterm$': require.resolve('@xterm/xterm/lib/xterm.js'),
+  },
+  esbuildMinifyIIFE: true,
+  hash: true,
   dva: {},
 });

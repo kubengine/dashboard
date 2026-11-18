@@ -1,5 +1,6 @@
 import { PageContainer } from '@ant-design/pro-components';
-import { useParams } from '@umijs/max';
+import { Link, useParams } from '@umijs/max';
+import { Button, Space } from 'antd';
 import React from 'react';
 import NoFoundPage from '../404';
 import ConfigMapDetail from './components/ConfigMapDetail';
@@ -49,7 +50,44 @@ const ResourceInfo: React.FC = () => {
     }
   };
 
-  return <PageContainer title={false}>{resource_map(type)}</PageContainer>;
+  const canonical =
+    type === 'pvc'
+      ? 'persistentvolumeclaim'
+      : type === 'pv'
+      ? 'persistentvolume'
+      : type;
+  const inspectPath = `/resources/${canonical}/${encodeURIComponent(
+    namespace,
+  )}/${encodeURIComponent(name)}`;
+  return (
+    <PageContainer title={false}>
+      <Space wrap style={{ marginBottom: 20 }}>
+        <Link to={inspectPath}>
+          <Button>资源中心查看</Button>
+        </Link>
+        <Link to={`${inspectPath}?tab=events`}>
+          <Button>查看事件</Button>
+        </Link>
+        <Link to={`${inspectPath}?tab=yaml`}>
+          <Button>查看 YAML</Button>
+        </Link>
+        {type === 'pod' && (
+          <>
+            <Link to={`${inspectPath}?tab=logs`}>
+              <Button>容器日志</Button>
+            </Link>
+            <Link to={`${inspectPath}?tab=terminal`}>
+              <Button>终端</Button>
+            </Link>
+            <Link to={`${inspectPath}?tab=files`}>
+              <Button>文件管理</Button>
+            </Link>
+          </>
+        )}
+      </Space>
+      {resource_map(type)}
+    </PageContainer>
+  );
 };
 
 export default ResourceInfo;

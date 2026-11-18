@@ -15,6 +15,7 @@ import React, { useState } from 'react';
 
 const destinations = [
   { title: '资源总览', group: '工作空间', path: '/home' },
+  { title: '资源中心', group: '工作空间', path: '/resources' },
   { title: '镜像仓库', group: '制品管理', path: '/artifacts/imagesRepo' },
   { title: '镜像导入', group: '制品管理', path: '/artifacts/imageImports' },
   { title: 'Helm 模板仓库', group: '制品管理', path: '/artifacts/chartsRepo' },
@@ -30,12 +31,16 @@ export const ConsoleHeader: React.FC<{
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const active = destinations.find((item) => item.path === pathname);
+  const active =
+    destinations.find((item) => item.path === pathname) ||
+    (/^\/resources\/[^/]+$/.test(pathname)
+      ? destinations.find((item) => item.path === '/resources')
+      : undefined);
   const group =
     active?.group ||
     (pathname.startsWith('/artifacts')
       ? '制品管理'
-      : pathname === '/nodeDetail'
+      : pathname === '/nodeDetail' || pathname.startsWith('/resources')
       ? '工作空间'
       : '应用中心');
   return (

@@ -32,7 +32,7 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
       const cpu_usage_rate = metrics.find(
         (item: any) => item['metricName'] == 'cpu/usage_rate',
       );
-      var cpuUsageRate: DataPoint2[] = [];
+      let cpuUsageRate: DataPoint2[] = [];
       cpu_usage_rate['dataPoints'].forEach((item: any) => {
         cpuUsageRate.push({
           x: dayjs(item.x * 1000).format('HH:mm'),
@@ -44,7 +44,7 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
       const memory_usage = metrics.find(
         (item: any) => item['metricName'] == 'memory/usage',
       );
-      var memoryUsageRate: DataPoint2[] = [];
+      let memoryUsageRate: DataPoint2[] = [];
       memory_usage['dataPoints'].forEach((item: any) => {
         memoryUsageRate.push({
           x: dayjs(item.x * 1000).format('HH:mm'),
@@ -146,17 +146,24 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
       key: 'type',
       width: 150,
       render: (_: any, record: any) => {
-        // const keys = Object.keys(record.volume)
-        if ('configMap' in record.volume) {
-          return 'ConfigMap';
-        } else if ('persistentVolumeClaim' in record.volume) {
-          return 'PersistentVolumeClaim';
-        } else if ('secret' in record.volume) {
-          return 'Secret';
-        } else if ('emptyDir' in record.volume) {
-          return 'EmptyDir';
-        }
-        return '-';
+        const volume =
+          record.volume && typeof record.volume === 'object'
+            ? record.volume
+            : {};
+        const types: Record<string, string> = {
+          configMap: 'ConfigMap',
+          persistentVolumeClaim: 'PersistentVolumeClaim',
+          secret: 'Secret',
+          emptyDir: 'EmptyDir',
+          projected: 'Projected',
+          hostPath: 'HostPath',
+          downwardAPI: 'DownwardAPI',
+          csi: 'CSI',
+        };
+        const type = Object.keys(volume).find(
+          (key) => key !== 'name' && volume[key] != null,
+        );
+        return type ? types[type] || type : '-';
       },
     },
     {
@@ -164,29 +171,32 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
       key: 'typeName',
       width: 150,
       render: (_: any, record: any) => {
-        // const keys = Object.keys(record.volume)
-        if ('configMap' in record.volume) {
+        const volume =
+          record.volume && typeof record.volume === 'object'
+            ? record.volume
+            : {};
+        if (volume.configMap?.name) {
           return (
             <Link
-              to={`/apps/info/configmap/${namespace}/${record.volume.configMap.name}`}
+              to={`/apps/info/configmap/${namespace}/${volume.configMap.name}`}
             >
-              {record.volume.configMap.name}
+              {volume.configMap.name}
             </Link>
           );
-        } else if ('persistentVolumeClaim' in record.volume) {
+        } else if (volume.persistentVolumeClaim?.claimName) {
           return (
             <Link
-              to={`/apps/info/pvc/${namespace}/${record.volume.persistentVolumeClaim.claimName}`}
+              to={`/apps/info/pvc/${namespace}/${volume.persistentVolumeClaim.claimName}`}
             >
-              {record.volume.persistentVolumeClaim.claimName}
+              {volume.persistentVolumeClaim.claimName}
             </Link>
           );
-        } else if ('secret' in record.volume) {
+        } else if (volume.secret?.secretName) {
           return (
             <Link
-              to={`/apps/info/secret/${namespace}/${record.volume.secret.secretName}`}
+              to={`/apps/info/secret/${namespace}/${volume.secret.secretName}`}
             >
-              {record.volume.secret.secretName}
+              {volume.secret.secretName}
             </Link>
           );
         }
@@ -220,6 +230,7 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
         data={resource?.objectMeta}
         items={[
           <ProDescriptions.Item
+            key="owner"
             label="Owner"
             span={3}
             render={() => {
@@ -227,6 +238,7 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
                 <Space size="small" wrap>
                   {resource?.objectMeta.ownerReferences.map((item: any) => (
                     <Link
+                      key={item.uid || `${item.kind}/${item.name}`}
                       to={`/apps/info/${item.kind.toLowerCase()}/${
                         resource?.objectMeta.namespace
                       }/${item.name}`}
@@ -308,7 +320,7 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
                 {Object.entries(
                   resource?.controller.objectMeta.labels || {},
                 ).map(([key, value]) => (
-                  <Tag>{`${key}: ${value}`}</Tag>
+                  <Tag key={key}>{`${key}: ${value}`}</Tag>
                 ))}
               </Space>
             )}
@@ -320,7 +332,7 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
               <Space size="small" wrap>
                 {(resource?.controller.containerImages || []).map(
                   (item: any) => (
-                    <Tag>{item}</Tag>
+                    <Tag key={item}>{item}</Tag>
                   ),
                 )}
               </Space>
@@ -400,6 +412,7 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
                 <ProDescriptions column={6} layout="vertical" title="环境变量">
                   {item.env.map((item: any) => (
                     <ProDescriptions.Item
+                      key={item.name}
                       label={item.name}
                       renderText={() => item.value}
                     />
@@ -556,7 +569,7 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
                 <Space>
                   {Object.entries(item.resources.requests).map(
                     ([key, value]) => {
-                      return <Tag>{`${key}: ${value}`}</Tag>;
+                      return <Tag key={key}>{`${key}: ${value}`}</Tag>;
                     },
                   )}
                 </Space>
