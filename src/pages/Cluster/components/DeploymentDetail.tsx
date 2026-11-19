@@ -1,3 +1,4 @@
+import DeploymentOperations from '@/pages/Resources/DeploymentOperations';
 import services from '@/services';
 import { isSuccessCode, showRequestError } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
@@ -87,6 +88,7 @@ const DeploymentDetail: React.FC<Props> = ({ namespace, name }) => {
   }, [namespace, name]);
   return (
     <>
+      <DeploymentOperations namespace={namespace} name={name} />
       <Metadata data={resource?.objectMeta} />
       <Divider />
       <PodsStatus data={resource?.pods || {}} />

@@ -24,6 +24,7 @@ import {
   Typography,
 } from 'antd';
 import React, { useEffect, useState } from 'react';
+import DeploymentOperations from './DeploymentOperations';
 import Events from './Events';
 import PodAccess from './PodAccess';
 import PodLogs from './PodLogs';
@@ -215,7 +216,12 @@ const Detail: React.FC = () => {
       .join(', ');
   };
   const overview = (
-    <Space direction="vertical" size={20} style={{ width: '100%' }}>
+    <Space
+      className="ke-resource-overview"
+      direction="vertical"
+      size={20}
+      style={{ width: '100%' }}
+    >
       {type === 'node' && (
         <Link to={`/nodeDetail?name=${encodeURIComponent(name)}`}>
           查看节点资源监控与分配情况
@@ -743,6 +749,9 @@ const Detail: React.FC = () => {
         ]}
       />
       <Spin spinning={loading}>
+        {type === 'deployment' && tab === 'overview' && (
+          <DeploymentOperations namespace={namespace} name={name} />
+        )}
         {raw && tab === 'overview' && overview}
         {raw && tab === 'logs' && (
           <Card>

@@ -56,6 +56,9 @@ export default function Audit() {
     denied: '拒绝',
     pending: '结果待核实',
     partial: '部分完成',
+    accepted: '集群已接受',
+    rejected: '未执行或已拒绝',
+    unknown: '写入待核实',
   };
   return (
     <>
@@ -186,11 +189,13 @@ export default function Audit() {
               render: (v: string) => (
                 <Tag
                   color={
-                    v === 'success'
+                    v === 'accepted'
+                      ? 'blue'
+                      : v === 'success'
                       ? 'green'
                       : v === 'denied'
                       ? 'orange'
-                      : v === 'pending'
+                      : v === 'pending' || v === 'unknown'
                       ? 'gold'
                       : 'red'
                   }
@@ -259,6 +264,8 @@ export default function Audit() {
                   children:
                     key === 'action'
                       ? auditActionLabel(String(value ?? ''))
+                      : key === 'result'
+                      ? resultLabels[String(value)] || String(value ?? '—')
                       : key.endsWith('_at') && value
                       ? new Date(Number(value) * 1000).toLocaleString()
                       : String(value ?? '—'),
