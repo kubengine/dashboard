@@ -1,16 +1,11 @@
 import PageHeading from '@/components/PageHeading';
-import YamlDisplay from '@/components/YamlDisplay';
 import {
   events,
   manifest,
   resource_pod,
 } from '@/services/KubernetesController';
 import { getRelativeTime } from '@/utils/time';
-import {
-  ArrowLeftOutlined,
-  DownloadOutlined,
-  ReloadOutlined,
-} from '@ant-design/icons';
+import { ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Link, useParams, useSearchParams } from '@umijs/max';
 import {
   Alert,
@@ -29,7 +24,8 @@ import {
 import React, { useEffect, useState } from 'react';
 import Events from './Events';
 import PodAccess from './PodAccess';
-import PodLogs, { downloadText } from './PodLogs';
+import PodLogs from './PodLogs';
+import ResourceYaml from './ResourceYaml';
 import ServiceEndpoints from './ServiceEndpoints';
 import {
   catalog,
@@ -747,15 +743,15 @@ const Detail: React.FC = () => {
           </Card>
         )}
         {tab === 'yaml' && raw && (
-          <>
-            <Button
-              icon={<DownloadOutlined aria-hidden="true" />}
-              onClick={() => downloadText(`${type}-${name}.yaml`, yaml)}
-            >
-              下载 YAML
-            </Button>
-            <YamlDisplay yamlText={yaml} title="原始 YAML · 只读" />
-          </>
+          <ResourceYaml
+            key={`${type}/${namespace}/${name}/${reveal}`}
+            type={type}
+            namespace={namespace}
+            name={name}
+            yaml={yaml}
+            reveal={reveal}
+            onApplied={() => setRefresh((v) => v + 1)}
+          />
         )}
         {tab === 'events' && (
           <Card>
