@@ -1,5 +1,6 @@
 import Labels from '@/components/Labels';
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { Link } from '@umijs/max';
 import { Card, PaginationProps, Space, Table } from 'antd';
 import dayjs from 'dayjs';
@@ -21,31 +22,35 @@ const Ingresses: React.FC<Props> = ({ name, namespace, type }) => {
     pageSize: 10,
   });
   const get_resource = async () => {
-    if (type) {
-      const { code, data } =
-        await services.KubernetesController.resource_detail(
-          type,
+    try {
+      if (type) {
+        const { code, data } =
+          await services.KubernetesController.resource_detail(
+            type,
+            namespace,
+            encodeURIComponent(encodeURIComponent(`${name}/ingress`)),
+          );
+        if (isSuccessCode(code)) {
+          const { items, listMeta } = data;
+          setCount(listMeta.totalItems);
+          setData(items);
+        }
+      } else {
+        const { code, data } = await services.KubernetesController.resource(
+          'ingress',
           namespace,
-          encodeURIComponent(encodeURIComponent(`${name}/ingress`)),
+          name,
+          paginationParams.pageSize,
+          paginationParams.current,
         );
-      if (code == 200) {
-        const { items, listMeta } = data;
-        setCount(listMeta.totalItems);
-        setData(items);
+        if (isSuccessCode(code)) {
+          const { items, listMeta } = data;
+          setCount(listMeta.totalItems);
+          setData(items);
+        }
       }
-    } else {
-      const { code, data } = await services.KubernetesController.resource(
-        'ingress',
-        namespace,
-        name,
-        paginationParams.pageSize,
-        paginationParams.current,
-      );
-      if (code == 200) {
-        const { items, listMeta } = data;
-        setCount(listMeta.totalItems);
-        setData(items);
-      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   useEffect(() => {
@@ -85,6 +90,11 @@ const Ingresses: React.FC<Props> = ({ name, namespace, type }) => {
           <Space direction="vertical" size="small">
             {endpoints.map((item) => (
               <a
+                key={
+                  item.ports
+                    ? `http://${item.host}:${item.ports}`
+                    : `http://${item.host}`
+                }
                 href={
                   item.ports
                     ? `http://${item.host}:${item.ports}`
@@ -110,6 +120,7 @@ const Ingresses: React.FC<Props> = ({ name, namespace, type }) => {
           <Space direction="vertical" size="small">
             {hosts.map((item) => (
               <a
+                key={`https://${item}`}
                 href={`https://${item}`}
                 target="_blank"
                 rel="noopener noreferrer"

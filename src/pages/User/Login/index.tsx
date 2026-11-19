@@ -1,6 +1,7 @@
 import Brand from '@/components/Brand';
 import service from '@/services';
 import { saveToken } from '@/utils/auth';
+import { getRequestErrorMessage } from '@/utils/request';
 import {
   ArrowRightOutlined,
   CheckOutlined,
@@ -42,8 +43,8 @@ const Login: React.FC = () => {
         },
       });
       history.push('/');
-    } catch {
-      setError('登录未成功，请检查用户名、密码和网络连接后重试。');
+    } catch (error) {
+      setError(getRequestErrorMessage(error, '登录失败，请重试'));
     } finally {
       setLoading(false);
     }

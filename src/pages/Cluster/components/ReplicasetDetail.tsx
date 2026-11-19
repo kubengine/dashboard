@@ -1,12 +1,13 @@
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { ProDescriptions } from '@ant-design/pro-components';
 import { Link } from '@umijs/max';
 import { Card, Divider, Space, Tag } from 'antd';
 import { useEffect, useState } from 'react';
 import { Metadata } from './Metadata';
+import { PodsStatus } from './PodsStatus';
 import ResourcePods from './ResourcePods';
 import Services from './Services';
-import { PodsStatus } from './PodsStatus';
 interface Props {
   namespace: string;
   name: string;
@@ -15,13 +16,18 @@ const ReplicasetDetail: React.FC<Props> = ({ namespace, name }) => {
   const [resource, setResource] = useState<any>();
 
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource_detail(
-      'replicaset',
-      namespace,
-      name,
-    );
-    if (code == 200) {
-      setResource(data);
+    try {
+      const { code, data } =
+        await services.KubernetesController.resource_detail(
+          'replicaset',
+          namespace,
+          name,
+        );
+      if (isSuccessCode(code)) {
+        setResource(data);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
 
@@ -37,6 +43,7 @@ const ReplicasetDetail: React.FC<Props> = ({ namespace, name }) => {
         data={resource?.objectMeta}
         items={[
           <ProDescriptions.Item
+            key={'owner'}
             label="Owner"
             render={() => {
               const owner = resource?.objectMeta.ownerReferences.find(
@@ -64,7 +71,7 @@ const ReplicasetDetail: React.FC<Props> = ({ namespace, name }) => {
             render={() => (
               <Space size="small" wrap>
                 {(resource?.containerImages || []).map((item: string) => (
-                  <Tag bordered={false} style={{ margin: 0 }}>
+                  <Tag key={item} bordered={false} style={{ margin: 0 }}>
                     {item}
                   </Tag>
                 ))}
@@ -78,7 +85,7 @@ const ReplicasetDetail: React.FC<Props> = ({ namespace, name }) => {
               <Space size="small" wrap>
                 {Object.entries(resource?.selector.matchLabels || {}).map(
                   ([key, value]) => (
-                    <Tag bordered={false} style={{ margin: 0 }}>
+                    <Tag key={key} bordered={false} style={{ margin: 0 }}>
                       {`${key}: ${value}`}
                     </Tag>
                   ),

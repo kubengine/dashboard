@@ -1,5 +1,6 @@
 import Labels from '@/components/Labels';
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { ProDescriptions } from '@ant-design/pro-components';
 import { Card, Divider, Space, Table, Tag } from 'antd';
 import { useEffect, useState } from 'react';
@@ -14,13 +15,18 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ namespace, name }) => {
   const [resource, setResource] = useState<any>();
 
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource_detail(
-      'service',
-      namespace,
-      name,
-    );
-    if (code == 200) {
-      setResource(data);
+    try {
+      const { code, data } =
+        await services.KubernetesController.resource_detail(
+          'service',
+          namespace,
+          name,
+        );
+      if (isSuccessCode(code)) {
+        setResource(data);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
 
@@ -44,7 +50,7 @@ const ServiceDetail: React.FC<ServiceDetailProps> = ({ namespace, name }) => {
         <Space size="small" wrap>
           {record.ports.map((item: any) =>
             Object.entries(item || {}).map(([key, value]) => (
-              <Tag bordered={false} style={{ margin: 0 }}>
+              <Tag key={key} bordered={false} style={{ margin: 0 }}>
                 {`${key}: ${value}`}
               </Tag>
             )),

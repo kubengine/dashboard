@@ -14,6 +14,12 @@ declare namespace API {
     code: number;
     message: string;
     data: any;
+    request_id?: string | null;
+    error_code?: string | null;
+    details?:
+      | { loc: (string | number)[]; type?: string; msg: string }[]
+      | Record<string, any>
+      | null;
     new_access_token?: string | null;
     token_type?: string | null;
   };

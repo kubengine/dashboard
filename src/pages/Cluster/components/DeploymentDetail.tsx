@@ -1,4 +1,5 @@
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
 import { ProDescriptions } from '@ant-design/pro-components';
 import { Card, Divider, Space, Table, Tag } from 'antd';
@@ -14,22 +15,27 @@ const DeploymentDetail: React.FC<Props> = ({ namespace, name }) => {
   const [replicaSet, setReplicaSet] = useState<any>();
 
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource_detail(
-      'deployment',
-      namespace,
-      name,
-    );
-    if (code == 200) {
-      setResource(data);
-    }
-    const { code: replicaCode, data: replicaData } =
-      await services.KubernetesController.resource_detail(
-        'deployment',
-        namespace,
-        encodeURIComponent(encodeURIComponent(`${name}/newreplicaset`)),
-      );
-    if (replicaCode == 200) {
-      setReplicaSet(replicaData);
+    try {
+      const { code, data } =
+        await services.KubernetesController.resource_detail(
+          'deployment',
+          namespace,
+          name,
+        );
+      if (isSuccessCode(code)) {
+        setResource(data);
+      }
+      const { code: replicaCode, data: replicaData } =
+        await services.KubernetesController.resource_detail(
+          'deployment',
+          namespace,
+          encodeURIComponent(encodeURIComponent(`${name}/newreplicaset`)),
+        );
+      if (replicaCode == 200) {
+        setReplicaSet(replicaData);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   const columns = [
@@ -102,7 +108,7 @@ const DeploymentDetail: React.FC<Props> = ({ namespace, name }) => {
             render={(data) => (
               <Space size="small" wrap>
                 {Object.entries(data || {}).map(([key, value]) => (
-                  <Tag bordered={false} style={{ margin: 0 }}>
+                  <Tag key={key} bordered={false} style={{ margin: 0 }}>
                     {key}: {value}
                   </Tag>
                 ))}

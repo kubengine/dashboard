@@ -1,4 +1,5 @@
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { PageContainer } from '@ant-design/pro-components';
 import { useParams } from '@umijs/max';
 import { message } from 'antd';
@@ -21,11 +22,13 @@ const ClusterDetail: React.FC = () => {
         data,
         message: msg,
       } = await services.AppsController.get_cluster_by_id(cluster_id);
-      if (code == 200) {
+      if (isSuccessCode(code)) {
         setName(data.helm_name);
       } else {
         message.error(msg);
       }
+    } catch (error) {
+      showRequestError(error);
     } finally {
       setLoading(false);
     }

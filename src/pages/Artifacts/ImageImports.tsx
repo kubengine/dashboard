@@ -5,6 +5,11 @@ import type {
   ImageImportTask,
 } from '@/services/ArtifactsController';
 import {
+  getRequestErrorMessage,
+  isSuccessCode,
+  showRequestError,
+} from '@/utils/request';
+import {
   CloudUploadOutlined,
   EyeOutlined,
   ReloadOutlined,
@@ -84,7 +89,11 @@ const ImageImports: React.FC = () => {
   const [retrying, setRetrying] = useState(false);
 
   const fetchTasks = useCallback(
-    async (current = pagination.current, pageSize = pagination.pageSize) => {
+    async (
+      current = pagination.current,
+      pageSize = pagination.pageSize,
+      silent = false,
+    ) => {
       try {
         const {
           code,
@@ -93,8 +102,9 @@ const ImageImports: React.FC = () => {
         } = await service.ArtifactsController.get_image_import_tasks(
           pageSize,
           current,
+          silent ? 'silent' : 'global',
         );
-        if (code === 200 && data) {
+        if (isSuccessCode(code) && data) {
           setTasks(data.data || []);
           setPagination((value) => ({
             ...value,
@@ -105,8 +115,10 @@ const ImageImports: React.FC = () => {
         } else {
           message.error(msg || '获取镜像导入任务失败');
         }
+      } catch (error) {
+        showRequestError(error);
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     },
     [pagination.current, pagination.pageSize],
@@ -119,12 +131,17 @@ const ImageImports: React.FC = () => {
         code,
         data,
         message: msg,
-      } = await service.ArtifactsController.get_image_import_task(taskId);
-      if (code === 200 && data) {
+      } = await service.ArtifactsController.get_image_import_task(
+        taskId,
+        silent ? 'silent' : 'global',
+      );
+      if (isSuccessCode(code) && data) {
         setSelectedTask(data);
       } else if (!silent) {
         message.error(msg || '获取导入详情失败');
       }
+    } catch (error) {
+      showRequestError(error);
     } finally {
       if (!silent) setDetailLoading(false);
     }
@@ -153,7 +170,7 @@ const ImageImports: React.FC = () => {
   useEffect(() => {
     if (!hasRunningTask && !selectedTaskIsRunning) return;
     const timer = window.setInterval(() => {
-      void fetchTasks();
+      void fetchTasks(pagination.current, pagination.pageSize, true);
       if (selectedTask && selectedTaskIsRunning) {
         void fetchDetail(selectedTask.task_id, true);
       }
@@ -165,6 +182,8 @@ const ImageImports: React.FC = () => {
     hasRunningTask,
     selectedTask,
     selectedTaskIsRunning,
+    pagination.current,
+    pagination.pageSize,
   ]);
 
   const openDetail = async (task: ImageImportTask) => {
@@ -178,13 +197,15 @@ const ImageImports: React.FC = () => {
     try {
       const { code, message: msg } =
         await service.ArtifactsController.retry_image_import_task(task.task_id);
-      if (code === 200) {
+      if (isSuccessCode(code)) {
         message.success('失败镜像已加入重试队列');
         await fetchTasks();
         if (detailOpen) await fetchDetail(task.task_id, true);
       } else {
         message.error(msg || '重试失败');
       }
+    } catch (error) {
+      showRequestError(error);
     } finally {
       setRetrying(false);
     }
@@ -202,7 +223,7 @@ const ImageImports: React.FC = () => {
           }
         },
       );
-      if (result.code === 200) {
+      if (isSuccessCode(result.code)) {
         options.onSuccess?.(result);
         message.success('文件上传完成，已创建后台导入任务');
         setUploadOpen(false);
@@ -212,9 +233,9 @@ const ImageImports: React.FC = () => {
         throw new Error(result.message || '创建镜像导入任务失败');
       }
     } catch (error) {
-      const reason = error instanceof Error ? error.message : '上传失败';
-      options.onError?.(new Error(reason));
-      message.error(reason);
+      const reason = getRequestErrorMessage(error, '上传失败');
+      options.onError?.(error instanceof Error ? error : new Error(reason));
+      showRequestError(error, '上传失败');
     } finally {
       setUploading(false);
     }

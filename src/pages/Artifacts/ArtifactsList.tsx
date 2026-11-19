@@ -1,5 +1,6 @@
 import PageHeading from '@/components/PageHeading';
 import service from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { formatBytes } from '@/utils/storage';
 import {
   CheckOutlined,
@@ -59,7 +60,7 @@ const ArtifactsList: React.FC = () => {
         pageSize,
         current,
       );
-      if (code == 200) {
+      if (isSuccessCode(code)) {
         setData(data);
         if (searchText) {
           setCount(data.length);
@@ -220,16 +221,20 @@ const ArtifactsList: React.FC = () => {
       });
   };
   const handleDelete = async (digest: string) => {
-    const { code } = await service.ArtifactsController.del_artifact(
-      project_name || '',
-      encodeURIComponent(encodeURIComponent(repository_name || '')),
-      digest || '',
-    );
-    if (code == 200) {
-      message.success('制品删除成功');
-      fetchArtifacts();
-    } else {
-      message.error(`获取${project_name}仓库制品失败`);
+    try {
+      const { code } = await service.ArtifactsController.del_artifact(
+        project_name || '',
+        encodeURIComponent(encodeURIComponent(repository_name || '')),
+        digest || '',
+      );
+      if (isSuccessCode(code)) {
+        message.success('制品删除成功');
+        fetchArtifacts();
+      } else {
+        message.error(`获取${project_name}仓库制品失败`);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   const columns = [

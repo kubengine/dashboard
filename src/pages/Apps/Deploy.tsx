@@ -2,6 +2,7 @@ import PageHeading from '@/components/PageHeading';
 import services from '@/services';
 import { App } from '@/services/AppController';
 import { deploymentSubmission } from '@/utils/deploymentSubmission';
+import { isSuccessCode } from '@/utils/request';
 import { PageContainer } from '@ant-design/pro-components';
 import { history, useParams } from '@umijs/max';
 import { message } from 'antd';
@@ -25,7 +26,7 @@ const Deploy: React.FC = () => {
       const { code, data } = await services.AppsController.get_app_by_id(
         app_id,
       );
-      if (code === 200) {
+      if (isSuccessCode(code)) {
         setApp(data);
       }
     } catch {
@@ -46,7 +47,7 @@ const Deploy: React.FC = () => {
     const submission = deploymentSubmission(val);
     const pending = services.AppsController.deploy(val, submission.key)
       .then(({ code }) => {
-        if (code === 200) {
+        if (isSuccessCode(code)) {
           submitted.current = true;
           submission.complete();
           message.success('提交部署请求成功');

@@ -1,6 +1,7 @@
 import PageHeading from '@/components/PageHeading';
 import YamlDisplay from '@/components/YamlDisplay';
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
 import {
   DeleteOutlined,
@@ -136,7 +137,7 @@ const Cluster: React.FC = () => {
         paginationParams.pageSize,
         paginationParams.current,
       );
-      if (code === 200) {
+      if (isSuccessCode(code)) {
         setClusters(data.data);
         setCount(data.total);
       } else {
@@ -161,12 +162,14 @@ const Cluster: React.FC = () => {
     setLoading(true);
     try {
       const { code } = await services.AppsController.del_cluster(cluster_id);
-      if (code === 200) {
+      if (isSuccessCode(code)) {
         message.info(
           '清理任务已提交，完成后记录会自动移除；清理失败会保留记录',
         );
         await getCluster();
       }
+    } catch (error) {
+      showRequestError(error);
     } finally {
       setLoading(false);
     }
@@ -281,22 +284,27 @@ const Cluster: React.FC = () => {
     },
   ];
   const handleModalSubmit = async () => {
-    // 1. 表单校验
-    const values = await form.validateFields();
-    const newName = values.name.trim();
-    setModalLoading(true);
-    const { code } = await services.AppsController.update_cluster(
-      editData?.cluster_id || 0,
-      newName,
-    );
+    try {
+      // 1. 表单校验
+      const values = await form.validateFields();
+      const newName = values.name.trim();
+      setModalLoading(true);
+      const { code } = await services.AppsController.update_cluster(
+        editData?.cluster_id || 0,
+        newName,
+      );
 
-    // 4. 处理接口响应
-    if (code === 200) {
-      message.success('修改成功');
-      getCluster();
-      setVisible(false);
+      // 4. 处理接口响应
+      if (isSuccessCode(code)) {
+        message.success('修改成功');
+        getCluster();
+        setVisible(false);
+      }
+    } catch (error) {
+      showRequestError(error);
+    } finally {
+      setModalLoading(false);
     }
-    setModalLoading(false);
   };
 
   useEffect(() => {

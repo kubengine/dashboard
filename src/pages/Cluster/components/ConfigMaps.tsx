@@ -1,5 +1,6 @@
 import Labels from '@/components/Labels';
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { Link } from '@umijs/max';
 import { Card, PaginationProps, Table } from 'antd';
 import dayjs from 'dayjs';
@@ -20,17 +21,21 @@ const ConfigMaps: React.FC<ConfigMapsProps> = ({ name, namespace }) => {
     pageSize: 10,
   });
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource(
-      'configmap',
-      namespace,
-      name,
-      paginationParams.pageSize,
-      paginationParams.current,
-    );
-    if (code == 200) {
-      const { items, listMeta } = data;
-      setCount(listMeta.totalItems);
-      setData(items);
+    try {
+      const { code, data } = await services.KubernetesController.resource(
+        'configmap',
+        namespace,
+        name,
+        paginationParams.pageSize,
+        paginationParams.current,
+      );
+      if (isSuccessCode(code)) {
+        const { items, listMeta } = data;
+        setCount(listMeta.totalItems);
+        setData(items);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   useEffect(() => {

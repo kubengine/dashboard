@@ -4,6 +4,7 @@ import {
   manifest,
   resource_pod,
 } from '@/services/KubernetesController';
+import { getRequestErrorMessage, isSuccessCode } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
 import { ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Link, useParams, useSearchParams } from '@umijs/max';
@@ -103,13 +104,13 @@ const Detail: React.FC = () => {
     manifest(type, namespace, name, reveal, controller.signal)
       .then(({ code, data, message }) => {
         if (controller.signal.aborted) return;
-        if (code != 200) throw new Error(message || '资源读取失败');
+        if (!isSuccessCode(code)) throw new Error(message || '资源读取失败');
         setRaw(data.manifest);
         setYaml(data.yaml);
       })
       .catch((e) => {
         if (!controller.signal.aborted)
-          setError(e.message || '无法获取资源详情');
+          setError(getRequestErrorMessage(e, '无法获取资源详情'));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -126,7 +127,7 @@ const Detail: React.FC = () => {
     events(type, namespace, name, eventPage, controller.signal)
       .then(({ code, data, message }) => {
         if (controller.signal.aborted) return;
-        if (code != 200) throw new Error(message || '事件读取失败');
+        if (!isSuccessCode(code)) throw new Error(message || '事件读取失败');
         setEventRows(data.events);
         setEventTotal(data.listMeta.totalItems);
         if (data.errors?.length)
@@ -134,7 +135,7 @@ const Detail: React.FC = () => {
       })
       .catch((e) => {
         if (!controller.signal.aborted)
-          setEventError(e.message || '事件读取失败');
+          setEventError(getRequestErrorMessage(e, '事件读取失败'));
       })
       .finally(() => {
         if (!controller.signal.aborted) setEventsLoading(false);
@@ -151,7 +152,8 @@ const Detail: React.FC = () => {
     resource_pod(type, namespace, name, 10, podsPage, controller.signal)
       .then(({ code, data, message }) => {
         if (controller.signal.aborted) return;
-        if (code != 200) throw new Error(message || '关联 Pod 读取失败');
+        if (!isSuccessCode(code))
+          throw new Error(message || '关联 Pod 读取失败');
         setPods(data.pods || []);
         setPodsTotal(data.listMeta.totalItems);
         if (data.errors?.length)
@@ -159,7 +161,7 @@ const Detail: React.FC = () => {
       })
       .catch((e) => {
         if (!controller.signal.aborted)
-          setPodsError(e.message || '关联 Pod 读取失败');
+          setPodsError(getRequestErrorMessage(e, '关联 Pod 读取失败'));
       })
       .finally(() => {
         if (!controller.signal.aborted) setPodsLoading(false);

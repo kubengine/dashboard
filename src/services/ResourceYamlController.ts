@@ -52,7 +52,7 @@ export const editor = (
   request<API.Result>(base(kind, namespace, name) + '/edit', {
     method: 'GET',
     params: { reveal_secret },
-    skipErrorHandler: true,
+    errorMode: 'local',
   });
 export const preview = (
   kind: string,
@@ -64,7 +64,7 @@ export const preview = (
     method: 'POST',
     data,
     timeout: 90000,
-    skipErrorHandler: true,
+    errorMode: 'local',
   });
 export const apply_yaml = (
   kind: string,
@@ -76,7 +76,7 @@ export const apply_yaml = (
     method: 'POST',
     data,
     timeout: 120000,
-    skipErrorHandler: true,
+    errorMode: 'local',
   });
 export const versions = (
   kind: string,
@@ -89,7 +89,7 @@ export const versions = (
     method: 'GET',
     params: { page, page_size: 10 },
     signal,
-    skipErrorHandler: true,
+    errorMode: 'local',
   });
 export const version = (
   kind: string,
@@ -101,5 +101,5 @@ export const version = (
   request<API.Result>(base(kind, namespace, name) + '/versions/' + id, {
     method: 'GET',
     params: { reveal_secret },
-    skipErrorHandler: true,
+    errorMode: 'local',
   });

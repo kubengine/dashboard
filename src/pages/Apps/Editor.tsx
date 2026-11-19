@@ -1,4 +1,5 @@
 import PageHeading from '@/components/PageHeading';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 // src/pages/Apps/RegisterApp.tsx
 import services from '@/services';
 import {
@@ -39,29 +40,41 @@ const Editor: React.FC = () => {
   const [searchText, setSearchText] = useState<string>('');
 
   const getAppConfig = async () => {
-    const { code, data } = await services.AppsController.get_app_by_id(app_id);
-    if (code == 200) {
-      setSelectedHelmChart(data.helm_chart);
-      setFormConfig(data);
-      basicForm.setFieldsValue(data);
-    } else {
-      message.error('获取应用信息失败');
-      history.push('/apps/config');
+    try {
+      const { code, data } = await services.AppsController.get_app_by_id(
+        app_id,
+      );
+      if (isSuccessCode(code)) {
+        setSelectedHelmChart(data.helm_chart);
+        setFormConfig(data);
+        basicForm.setFieldsValue(data);
+      } else {
+        message.error('获取应用信息失败');
+        history.push('/apps/config');
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   // 获取Helm Chart列表
   const fetchHelmCharts = async () => {
-    setLoading(true);
-    const { code, data } = await services.ArtifactsController.get_repositories(
-      'charts',
-      searchText ? `name${encodeURIComponent('=')}~${searchText}` : '',
-      10,
-      1,
-    );
-    if (code == 200) {
-      setHelmCharts(data || []);
+    try {
+      setLoading(true);
+      const { code, data } =
+        await services.ArtifactsController.get_repositories(
+          'charts',
+          searchText ? `name${encodeURIComponent('=')}~${searchText}` : '',
+          10,
+          1,
+        );
+      if (isSuccessCode(code)) {
+        setHelmCharts(data || []);
+      }
+    } catch (error) {
+      showRequestError(error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -175,7 +188,7 @@ const Editor: React.FC = () => {
       if (app_id) {
         // 编辑
         const { code } = await services.AppsController.update(appData);
-        if (code == 200) {
+        if (isSuccessCode(code)) {
           message.success('保存配置成功');
         } else {
           message.error('保存配置失败');
@@ -183,13 +196,15 @@ const Editor: React.FC = () => {
       } else {
         // 注册
         const { code } = await services.AppsController.add(appData);
-        if (code == 200) {
+        if (isSuccessCode(code)) {
           message.success('应用注册成功');
           history.push('/apps/config');
         } else {
-          message.error(MSG);
+          message.error('应用注册失败，请检查输入');
         }
       }
+    } catch (error) {
+      showRequestError(error);
     } finally {
       setLoading(false);
     }

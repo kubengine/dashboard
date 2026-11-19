@@ -1,6 +1,7 @@
 import PageHeading from '@/components/PageHeading';
 import YamlDisplay from '@/components/YamlDisplay';
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import {
   CheckOutlined,
   CopyOutlined,
@@ -109,50 +110,61 @@ const ArtifactDetailPage: React.FC = () => {
       });
   };
   const fetchArtifact = async () => {
-    setLoading(true);
-    const { code, data } = await services.ArtifactsController.get_artifact(
-      project_name || '',
-      encodeURIComponent(encodeURIComponent(repository_name || '')),
-      digest || '',
-    );
-    if (code == 200) {
-      setArtifactData(data);
-      if (data.type == 'CHART') {
-        const { code, data } = await services.ArtifactsController.chart_values(
-          project_name || '',
-          encodeURIComponent(encodeURIComponent(repository_name || '')),
-          digest || '',
-        );
-        if (code == 200) {
-          setYamlText(data);
-        } else {
-          message.error('获取chart values.yaml失败');
+    try {
+      setLoading(true);
+      const { code, data } = await services.ArtifactsController.get_artifact(
+        project_name || '',
+        encodeURIComponent(encodeURIComponent(repository_name || '')),
+        digest || '',
+      );
+      if (isSuccessCode(code)) {
+        setArtifactData(data);
+        if (data.type == 'CHART') {
+          const { code, data } =
+            await services.ArtifactsController.chart_values(
+              project_name || '',
+              encodeURIComponent(encodeURIComponent(repository_name || '')),
+              digest || '',
+            );
+          if (isSuccessCode(code)) {
+            setYamlText(data);
+          } else {
+            message.error('获取chart values.yaml失败');
+          }
         }
+      } else {
+        message.error('获取Tags失败');
       }
-    } else {
-      message.error('获取Tags失败');
+    } catch (error) {
+      showRequestError(error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
   // 初始加载
   useEffect(() => {
     fetchArtifact();
   }, []);
   const handleDeleteTag = async (name: string) => {
-    setConfirmLoading(true);
-    const { code } = await services.ArtifactsController.del_artifact_tag(
-      project_name || '',
-      encodeURIComponent(encodeURIComponent(repository_name || '')),
-      digest || '',
-      name,
-    );
-    if (code == 200) {
-      message.success('Tag删除成功');
-      fetchArtifact(); // 重新加载列表
-    } else {
-      message.error('删除Tag失败');
+    try {
+      setConfirmLoading(true);
+      const { code } = await services.ArtifactsController.del_artifact_tag(
+        project_name || '',
+        encodeURIComponent(encodeURIComponent(repository_name || '')),
+        digest || '',
+        name,
+      );
+      if (isSuccessCode(code)) {
+        message.success('Tag删除成功');
+        fetchArtifact(); // 重新加载列表
+      } else {
+        message.error('删除Tag失败');
+      }
+    } catch (error) {
+      showRequestError(error);
+    } finally {
+      setConfirmLoading(false);
     }
-    setConfirmLoading(false);
   };
   const tagColumns = [
     {
@@ -246,7 +258,7 @@ const ArtifactDetailPage: React.FC = () => {
       );
 
       // 4. 处理接口响应
-      if (code === 201) {
+      if (isSuccessCode(code)) {
         message.success(`TAG ${newTagName} 添加成功`);
         fetchArtifact();
         handleAddTagClose();
@@ -255,8 +267,7 @@ const ArtifactDetailPage: React.FC = () => {
       }
     } catch (error) {
       // 表单校验失败或接口异常
-      console.error('添加 TAG 出错：', error);
-      message.error('添加 TAG 失败，请检查输入');
+      showRequestError(error, '添加 TAG 失败，请检查输入');
     } finally {
       setConfirmLoading(false);
     }

@@ -1,4 +1,5 @@
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { Divider } from 'antd';
 import { useEffect, useState } from 'react';
 import { Metadata } from './Metadata';
@@ -15,13 +16,18 @@ const StatefulSetDetail: React.FC<StatefulSetDetailProps> = ({
   const [resource, setResource] = useState<StatefulSetResource>();
 
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource_detail(
-      'statefulset',
-      namespace,
-      name,
-    );
-    if (code == 200) {
-      setResource(data);
+    try {
+      const { code, data } =
+        await services.KubernetesController.resource_detail(
+          'statefulset',
+          namespace,
+          name,
+        );
+      if (isSuccessCode(code)) {
+        setResource(data);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
 

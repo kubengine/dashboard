@@ -29,7 +29,7 @@ export const list_files = (
     method: 'GET',
     params: { container, path },
     signal,
-    skipErrorHandler: true,
+    errorMode: 'local',
   });
 export const operate_file = (
   namespace: string,
@@ -46,7 +46,7 @@ export const operate_file = (
     method: 'POST',
     params: { container },
     data,
-    skipErrorHandler: true,
+    errorMode: 'local',
   });
 export const upload_file = (
   namespace: string,
@@ -68,7 +68,7 @@ export const upload_file = (
     data,
     // 浏览器接收和容器写入分别计时，额外留出响应处理时间。
     timeout: (2 * transferTimeoutSeconds + 60) * 1000,
-    skipErrorHandler: true,
+    errorMode: 'local',
     onUploadProgress: (event: any) =>
       onProgress(
         event.total ? Math.round((event.loaded / event.total) * 100) : 0,
@@ -86,6 +86,7 @@ export const download_file = (
     method: 'GET',
     params: { container, path },
     responseType: 'blob',
+    errorMode: 'local',
     timeout: (transferTimeoutSeconds + 60) * 1000,
   });
 export const terminal_url = (

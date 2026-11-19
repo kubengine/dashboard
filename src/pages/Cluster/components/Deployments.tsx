@@ -1,5 +1,6 @@
 import Labels from '@/components/Labels';
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
 import { Link } from '@umijs/max';
 import { Card, PaginationProps, Space, Table, Tag } from 'antd';
@@ -21,17 +22,21 @@ const Deployments: React.FC<DaemonSetsProps> = ({ name, namespace }) => {
     pageSize: 10,
   });
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource(
-      'deployment',
-      namespace,
-      name,
-      paginationParams.pageSize,
-      paginationParams.current,
-    );
-    if (code == 200) {
-      const { deployments, listMeta } = data;
-      setCount(listMeta.totalItems);
-      setData(deployments);
+    try {
+      const { code, data } = await services.KubernetesController.resource(
+        'deployment',
+        namespace,
+        name,
+        paginationParams.pageSize,
+        paginationParams.current,
+      );
+      if (isSuccessCode(code)) {
+        const { deployments, listMeta } = data;
+        setCount(listMeta.totalItems);
+        setData(deployments);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
 
@@ -63,7 +68,12 @@ const Deployments: React.FC<DaemonSetsProps> = ({ name, namespace }) => {
         return (
           <Space direction="vertical" size="small">
             {containerImages.map((item) => (
-              <Tag bordered={false} color="cyan" style={{ margin: 0 }}>
+              <Tag
+                key={item}
+                bordered={false}
+                color="cyan"
+                style={{ margin: 0 }}
+              >
                 {item}
               </Tag>
             ))}

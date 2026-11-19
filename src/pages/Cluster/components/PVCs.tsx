@@ -1,5 +1,6 @@
 import Labels from '@/components/Labels';
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { Link } from '@umijs/max';
 import { Card, PaginationProps, Space, Table, Tag } from 'antd';
 import dayjs from 'dayjs';
@@ -21,31 +22,37 @@ const PVCs: React.FC<PVCsProps> = ({ name, namespace, type }) => {
     pageSize: 10,
   });
   const get_resource = async () => {
-    if (type) {
-      const { code, data } =
-        await services.KubernetesController.resource_detail(
-          type,
+    try {
+      if (type) {
+        const { code, data } =
+          await services.KubernetesController.resource_detail(
+            type,
+            namespace,
+            encodeURIComponent(
+              encodeURIComponent(`${name}/persistentvolumeclaim`),
+            ),
+          );
+        if (isSuccessCode(code)) {
+          const { items, listMeta } = data;
+          setCount(listMeta.totalItems);
+          setData(items);
+        }
+      } else {
+        const { code, data } = await services.KubernetesController.resource(
+          'persistentvolumeclaim',
           namespace,
-          encodeURIComponent(encodeURIComponent(`${name}/persistentvolumeclaim`)),
+          name,
+          paginationParams.pageSize,
+          paginationParams.current,
         );
-      if (code == 200) {
-        const { items, listMeta } = data;
-        setCount(listMeta.totalItems);
-        setData(items);
+        if (isSuccessCode(code)) {
+          const { items, listMeta } = data;
+          setCount(listMeta.totalItems);
+          setData(items);
+        }
       }
-    } else {
-      const { code, data } = await services.KubernetesController.resource(
-        'persistentvolumeclaim',
-        namespace,
-        name,
-        paginationParams.pageSize,
-        paginationParams.current,
-      );
-      if (code == 200) {
-        const { items, listMeta } = data;
-        setCount(listMeta.totalItems);
-        setData(items);
-      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   useEffect(() => {
@@ -97,7 +104,12 @@ const PVCs: React.FC<PVCsProps> = ({ name, namespace, type }) => {
         return (
           <Space direction="vertical" size="small">
             {accessModes.map((item) => (
-              <Tag bordered={false} color="cyan" style={{ margin: 0 }}>
+              <Tag
+                key={item}
+                bordered={false}
+                color="cyan"
+                style={{ margin: 0 }}
+              >
                 {item}
               </Tag>
             ))}

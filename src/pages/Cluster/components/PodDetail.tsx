@@ -1,6 +1,7 @@
 import { DataPoint2 } from '@/components/data';
 import Usage from '@/components/Usage';
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
 import { CheckCircleTwoTone, CloseCircleTwoTone } from '@ant-design/icons';
 import { ProDescriptions } from '@ant-design/pro-components';
@@ -21,38 +22,43 @@ const PodDetail: React.FC<Props> = ({ namespace, name }) => {
   const [memoryUsage, setMemoryUsage] = useState<DataPoint2[]>([]);
 
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource_detail(
-      'pod',
-      namespace,
-      name,
-    );
-    if (code == 200) {
-      setResource(data);
-      const metrics = data['metrics'];
-      const cpu_usage_rate = metrics.find(
-        (item: any) => item['metricName'] == 'cpu/usage_rate',
-      );
-      let cpuUsageRate: DataPoint2[] = [];
-      cpu_usage_rate['dataPoints'].forEach((item: any) => {
-        cpuUsageRate.push({
-          x: dayjs(item.x * 1000).format('HH:mm'),
-          y: item.y,
-          type: 'CPU Usage',
+    try {
+      const { code, data } =
+        await services.KubernetesController.resource_detail(
+          'pod',
+          namespace,
+          name,
+        );
+      if (isSuccessCode(code)) {
+        setResource(data);
+        const metrics = data['metrics'];
+        const cpu_usage_rate = metrics.find(
+          (item: any) => item['metricName'] == 'cpu/usage_rate',
+        );
+        let cpuUsageRate: DataPoint2[] = [];
+        cpu_usage_rate['dataPoints'].forEach((item: any) => {
+          cpuUsageRate.push({
+            x: dayjs(item.x * 1000).format('HH:mm'),
+            y: item.y,
+            type: 'CPU Usage',
+          });
         });
-      });
-      setCpuUsageRate(cpuUsageRate);
-      const memory_usage = metrics.find(
-        (item: any) => item['metricName'] == 'memory/usage',
-      );
-      let memoryUsageRate: DataPoint2[] = [];
-      memory_usage['dataPoints'].forEach((item: any) => {
-        memoryUsageRate.push({
-          x: dayjs(item.x * 1000).format('HH:mm'),
-          y: Number((item.y / 1024 / 1024).toFixed(2)),
-          type: 'Memory Usage',
+        setCpuUsageRate(cpuUsageRate);
+        const memory_usage = metrics.find(
+          (item: any) => item['metricName'] == 'memory/usage',
+        );
+        let memoryUsageRate: DataPoint2[] = [];
+        memory_usage['dataPoints'].forEach((item: any) => {
+          memoryUsageRate.push({
+            x: dayjs(item.x * 1000).format('HH:mm'),
+            y: Number((item.y / 1024 / 1024).toFixed(2)),
+            type: 'Memory Usage',
+          });
         });
-      });
-      setMemoryUsage(memoryUsageRate);
+        setMemoryUsage(memoryUsageRate);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
 

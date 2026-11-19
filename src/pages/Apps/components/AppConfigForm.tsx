@@ -1,5 +1,6 @@
 import services from '@/services';
 import { App, AppFieldConfig } from '@/services/AppController';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { ProCard } from '@ant-design/pro-components';
 import { history } from '@umijs/max';
 import { Button, Divider, Form, Space } from 'antd';
@@ -28,7 +29,7 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
     useState<{ label: string; value: string }[]>();
 
   const handleSubmit = async () => {
-    const [basic, cluster, env] = await Promise.all([
+    const groups = await Promise.all([
       basicForm.validateFields().catch((error) => {
         return Promise.reject({ form: 'basic', error });
       }),
@@ -39,8 +40,12 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
         .validateFields()
         .catch((error) => Promise.reject({ form: 'env', error })),
     ]).catch((e) => {
-      throw e;
+      if (e.form)
+        setCollapseds((previous) => ({ ...previous, [e.form]: false }));
+      return undefined;
     });
+    if (!groups) return;
+    const [basic, cluster, env] = groups;
     setLoading(true);
     const data = {
       ...basic,
@@ -49,45 +54,51 @@ export const AppConfigForm: React.FC<AppConfigFormProps> = ({
     };
     try {
       if (submit) await submit(data);
+    } catch (error) {
+      showRequestError(error);
     } finally {
       setLoading(false);
     }
   };
   const fetchArtifacts = async (current = 1, pageSize = 100) => {
-    const { code, data } = await services.ArtifactsController.get_artifacts(
-      'charts',
-      encodeURIComponent(encodeURIComponent(app.helm_chart)),
-      '',
-      pageSize,
-      current,
-    );
-    if (code === 200) {
-      const options = data
-        .filter(
-          (item: {
-            extra_attrs: { appVersion: any; version: any };
-            digest: any;
-          }) => {
-            // 过滤：确保extra_attrs、appVersion、version、digest都存在，避免空值
-            return (
-              item?.extra_attrs?.appVersion &&
-              item?.extra_attrs?.version &&
-              item?.digest
-            );
-          },
-        )
-        .map(
-          (item: {
-            extra_attrs: { appVersion: any; version: any };
-            digest: any;
-          }) => ({
-            label: `${item.extra_attrs.version} (appVersion:${item.extra_attrs.appVersion})`,
-            value: item.extra_attrs.version,
-          }),
-        );
-      if (options.length > 0) {
-        setVersionOptions(options);
+    try {
+      const { code, data } = await services.ArtifactsController.get_artifacts(
+        'charts',
+        encodeURIComponent(encodeURIComponent(app.helm_chart)),
+        '',
+        pageSize,
+        current,
+      );
+      if (isSuccessCode(code)) {
+        const options = data
+          .filter(
+            (item: {
+              extra_attrs: { appVersion: any; version: any };
+              digest: any;
+            }) => {
+              // 过滤：确保extra_attrs、appVersion、version、digest都存在，避免空值
+              return (
+                item?.extra_attrs?.appVersion &&
+                item?.extra_attrs?.version &&
+                item?.digest
+              );
+            },
+          )
+          .map(
+            (item: {
+              extra_attrs: { appVersion: any; version: any };
+              digest: any;
+            }) => ({
+              label: `${item.extra_attrs.version} (appVersion:${item.extra_attrs.appVersion})`,
+              value: item.extra_attrs.version,
+            }),
+          );
+        if (options.length > 0) {
+          setVersionOptions(options);
+        }
       }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   useEffect(() => {

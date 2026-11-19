@@ -5,6 +5,7 @@ import {
   Revision,
   YamlPreview,
 } from '@/services/ResourceYamlController';
+import { getRequestErrorMessage, isSuccessCode } from '@/utils/request';
 import {
   DownloadOutlined,
   EditOutlined,
@@ -35,8 +36,8 @@ const statuses: Record<string, { text: string; color: string }> = {
   pending: { text: '结果待确认', color: 'warning' },
   unknown: { text: '结果待核实', color: 'warning' },
 };
-const errorText = (error: any) =>
-  error.response?.data?.message || error.message || '请求失败，请重试';
+const errorText = getRequestErrorMessage;
+
 const Diff: React.FC<{ changes: ChangedField[] }> = ({ changes }) => (
   <Table
     size="small"
@@ -138,7 +139,7 @@ const ResourceYaml: React.FC<{
       .versions(type, namespace, name, page, controller.signal)
       .then(({ code, data, message }) => {
         if (controller.signal.aborted) return;
-        if (code != 200) throw new Error(message);
+        if (!isSuccessCode(code)) throw new Error(message);
         setHistory(data.items);
         setTotal(data.total);
       })
@@ -155,7 +156,7 @@ const ResourceYaml: React.FC<{
     setError('');
     try {
       const result = await service.editor(type, namespace, name, reveal);
-      if (result.code != 200) throw new Error(result.message);
+      if (!isSuccessCode(result.code)) throw new Error(result.message);
       if (!result.data.editable) throw new Error(result.data.reason);
       setBase(result.data);
       setDraft(result.data.yaml);
@@ -194,7 +195,7 @@ const ResourceYaml: React.FC<{
       if (parseDocument(draft, { uniqueKeys: true }).errors.length)
         throw new Error('YAML 语法不正确，请检查缩进、重复字段和文档结构');
       const result = await service.preview(type, namespace, name, payload());
-      if (result.code != 200) throw new Error(result.message);
+      if (!isSuccessCode(result.code)) throw new Error(result.message);
       if (result.data.noChanges) {
         message.info('没有配置改动，无需应用');
         return;
@@ -221,7 +222,7 @@ const ResourceYaml: React.FC<{
         request_id: requestId,
         preview_hash: preview.previewHash,
       });
-      if (result.code != 200) throw new Error(result.message);
+      if (!isSuccessCode(result.code)) throw new Error(result.message);
       if (!result.data.noChanges && result.data.revision?.status !== 'applied')
         throw new Error(
           result.data.warning ||
@@ -250,7 +251,7 @@ const ResourceYaml: React.FC<{
         row.id,
         reveal,
       );
-      if (result.code != 200) throw new Error(result.message);
+      if (!isSuccessCode(result.code)) throw new Error(result.message);
       setSelected(result.data);
     } catch (e) {
       setHistoryError(errorText(e));

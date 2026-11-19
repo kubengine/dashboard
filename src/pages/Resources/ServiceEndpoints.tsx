@@ -1,4 +1,5 @@
 import { resource_detail } from '@/services/KubernetesController';
+import { getRequestErrorMessage, isSuccessCode } from '@/utils/request';
 import { Alert, Card, Table } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { ResourceLink, Status } from './catalog';
@@ -18,14 +19,15 @@ const ServiceEndpoints: React.FC<{ namespace: string; name: string }> = ({
     resource_detail('service', namespace, name, controller.signal)
       .then(({ code, data, message }) => {
         if (controller.signal.aborted) return;
-        if (code != 200) throw new Error(message || '服务端点读取失败');
+        if (!isSuccessCode(code))
+          throw new Error(message || '服务端点读取失败');
         setRows(data.endpointList?.endpoints || []);
         if (data.errors?.length)
           setError(data.errors.map((e: any) => e.message).join('；'));
       })
       .catch((e) => {
         if (!controller.signal.aborted)
-          setError(e.message || '服务端点读取失败');
+          setError(getRequestErrorMessage(e, '服务端点读取失败'));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);

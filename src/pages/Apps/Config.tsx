@@ -1,6 +1,7 @@
 import PageHeading from '@/components/PageHeading';
 import services from '@/services';
 import { App } from '@/services/AppController';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
 import {
   DeleteOutlined,
@@ -56,7 +57,7 @@ const Config: React.FC = () => {
         paginationParams.pageSize,
         paginationParams.current,
       );
-      if (code == 200) {
+      if (isSuccessCode(code)) {
         setData(data.data);
         setCount(data.total);
       } else {
@@ -70,15 +71,20 @@ const Config: React.FC = () => {
   };
 
   const removeApp = async (app_id: number) => {
-    setLoading(true);
-    const { code } = await services.AppsController.del(app_id);
-    if (code == 200) {
-      message.success('应用删除成功');
-      getConfig();
-    } else {
-      message.error('应用删除失败');
+    try {
+      setLoading(true);
+      const { code } = await services.AppsController.del(app_id);
+      if (isSuccessCode(code)) {
+        message.success('应用删除成功');
+        getConfig();
+      } else {
+        message.error('应用删除失败');
+      }
+    } catch (error) {
+      showRequestError(error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
   const columns = [
     {

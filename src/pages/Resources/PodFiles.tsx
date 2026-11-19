@@ -7,6 +7,11 @@ import {
   upload_file,
 } from '@/services/PodOperationsController';
 import {
+  getRequestErrorMessage,
+  isSuccessCode,
+  showRequestError,
+} from '@/utils/request';
+import {
   ArrowUpOutlined,
   DeleteOutlined,
   DownloadOutlined,
@@ -60,10 +65,8 @@ const bytes = (size: number) =>
     : size < 1024 ** 3
     ? `${(size / 1024 ** 2).toFixed(1)} MiB`
     : `${(size / 1024 ** 3).toFixed(1)} GiB`;
-const errorText = (error: any) =>
-  typeof error.response?.data?.detail === 'string'
-    ? error.response.data.detail
-    : error.message || '操作失败，请重试';
+const errorText = getRequestErrorMessage;
+
 const PodFiles: React.FC<{
   namespace: string;
   name: string;
@@ -103,7 +106,7 @@ const PodFiles: React.FC<{
     list_files(namespace, name, container, requested, controller.signal)
       .then(({ code, data, message }) => {
         if (controller.signal.aborted) return;
-        if (code != 200) throw new Error(message || '目录读取失败');
+        if (!isSuccessCode(code)) throw new Error(message || '目录读取失败');
         setDirectory(data);
         setAddress(data.path);
       })
@@ -145,7 +148,7 @@ const PodFiles: React.FC<{
         path,
         name: editor.action === 'rename' ? values.name : undefined,
       });
-      if (result.code != 200) throw new Error(result.message);
+      if (!isSuccessCode(result.code)) throw new Error(result.message);
       message.success(editor.action === 'rename' ? '重命名成功' : '创建成功');
       setEditor(undefined);
       setRefresh((v) => v + 1);
@@ -165,7 +168,7 @@ const PodFiles: React.FC<{
         path: join(directory.path, deleting.name, windows),
         recursive: deleting.type === 'directory' && recursive,
       });
-      if (result.code != 200) throw new Error(result.message);
+      if (!isSuccessCode(result.code)) throw new Error(result.message);
       message.success('删除成功');
       setDeleting(undefined);
       setRefresh((v) => v + 1);
@@ -176,38 +179,44 @@ const PodFiles: React.FC<{
     }
   };
   const upload = async () => {
-    if (!directory) return;
-    setUploading(true);
-    setError('');
-    const results: Record<string, string> = {};
-    for (let i = 0; i < uploads.length; i++) {
-      const file = uploads[i];
-      setProgress(0);
-      results[i] = '上传中';
-      setUploadResults({ ...results });
-      try {
-        if (file.size > directory.maxFileBytes)
-          throw new Error(`单个文件最大 ${bytes(directory.maxFileBytes)}`);
-        const value = await upload_file(
-          namespace,
-          name,
-          container,
-          directory.path,
-          file,
-          overwrite,
-          setProgress,
-          directory.transferTimeoutSeconds,
-        );
-        if (value.code != 200) throw new Error(value.message);
-        results[i] = '成功';
-      } catch (e) {
-        results[i] = errorText(e);
+    try {
+      if (!directory) return;
+      setUploading(true);
+      setError('');
+      const results: Record<string, string> = {};
+      for (let i = 0; i < uploads.length; i++) {
+        const file = uploads[i];
+        setProgress(0);
+        results[i] = '上传中';
+        setUploadResults({ ...results });
+        try {
+          if (file.size > directory.maxFileBytes)
+            throw new Error(`单个文件最大 ${bytes(directory.maxFileBytes)}`);
+          const value = await upload_file(
+            namespace,
+            name,
+            container,
+            directory.path,
+            file,
+            overwrite,
+            setProgress,
+            directory.transferTimeoutSeconds,
+          );
+          if (!isSuccessCode(value.code)) throw new Error(value.message);
+          results[i] = '成功';
+        } catch (e) {
+          results[i] = errorText(e);
+        }
+        setUploadResults({ ...results });
       }
-      setUploadResults({ ...results });
+      setUploadDone(true);
+
+      setRefresh((v) => v + 1);
+    } catch (error) {
+      showRequestError(error);
+    } finally {
+      setUploading(false);
     }
-    setUploadDone(true);
-    setUploading(false);
-    setRefresh((v) => v + 1);
   };
   const download = async (row: PodFile) => {
     if (!directory) return;

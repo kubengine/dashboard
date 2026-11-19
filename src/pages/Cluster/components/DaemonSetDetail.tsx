@@ -1,11 +1,12 @@
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { ProDescriptions } from '@ant-design/pro-components';
 import { Card, Divider, Space, Tag } from 'antd';
 import { useEffect, useState } from 'react';
 import { Metadata } from './Metadata';
+import { PodsStatus } from './PodsStatus';
 import ResourcePods from './ResourcePods';
 import Services from './Services';
-import { PodsStatus } from './PodsStatus';
 interface DaemonSetDetailProps {
   namespace: string;
   name: string;
@@ -17,13 +18,18 @@ const DaemonSetDetail: React.FC<DaemonSetDetailProps> = ({
   const [resource, setResource] = useState<StatefulSetResource>();
 
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource_detail(
-      'daemonset',
-      namespace,
-      name,
-    );
-    if (code == 200) {
-      setResource(data);
+    try {
+      const { code, data } =
+        await services.KubernetesController.resource_detail(
+          'daemonset',
+          namespace,
+          name,
+        );
+      if (isSuccessCode(code)) {
+        setResource(data);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
 
@@ -47,7 +53,7 @@ const DaemonSetDetail: React.FC<DaemonSetDetailProps> = ({
             render={() => (
               <Space size="small" wrap>
                 {(resource?.containerImages || []).map((item) => (
-                  <Tag bordered={false} style={{ margin: 0 }}>
+                  <Tag key={item} bordered={false} style={{ margin: 0 }}>
                     {item}
                   </Tag>
                 ))}

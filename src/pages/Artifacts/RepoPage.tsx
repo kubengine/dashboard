@@ -1,6 +1,6 @@
 import PageHeading from '@/components/PageHeading';
 import service from '@/services';
-import { getBearerToken } from '@/utils/auth';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import {
   DeleteOutlined,
   EyeOutlined,
@@ -87,7 +87,7 @@ export const RepoPage: React.FC<RepoProps> = ({ name = '' }) => {
         pageSize,
         current,
       );
-      if (code === 200) {
+      if (isSuccessCode(code)) {
         setArtifactRepository(data);
         if (searchText) {
           setRepoCount(data.length);
@@ -103,11 +103,17 @@ export const RepoPage: React.FC<RepoProps> = ({ name = '' }) => {
   };
 
   const fetchProject = async () => {
-    const { code, data } = await service.ArtifactsController.get_projects(name);
-    if (code === 200) {
-      setRepoCount(data.repo_count);
-    } else {
-      message.error(`获取${name}仓库失败`);
+    try {
+      const { code, data } = await service.ArtifactsController.get_projects(
+        name,
+      );
+      if (isSuccessCode(code)) {
+        setRepoCount(data.repo_count);
+      } else {
+        message.error(`获取${name}仓库失败`);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
 
@@ -119,16 +125,20 @@ export const RepoPage: React.FC<RepoProps> = ({ name = '' }) => {
 
   // 处理删除仓库
   const handleDelete = async (p_name: string) => {
-    const r_name = encodeURIComponent(
-      encodeURIComponent(p_name.replace(new RegExp(`^${name}/`), '')),
-    );
-    const { code, message: msg } =
-      await service.ArtifactsController.del_repositories(name, r_name);
-    if (code === 200) {
-      message.success('仓库删除成功');
-      fetchRepos(); // 重新加载列表
-    } else {
-      message.error(msg);
+    try {
+      const r_name = encodeURIComponent(
+        encodeURIComponent(p_name.replace(new RegExp(`^${name}/`), '')),
+      );
+      const { code, message: msg } =
+        await service.ArtifactsController.del_repositories(name, r_name);
+      if (isSuccessCode(code)) {
+        message.success('仓库删除成功');
+        fetchRepos(); // 重新加载列表
+      } else {
+        message.error(msg);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
 
@@ -225,7 +235,7 @@ export const RepoPage: React.FC<RepoProps> = ({ name = '' }) => {
       fetchRepos();
       // setUploadModalVisible(false);
     } else if (info.file.status === 'error') {
-      message.error(info.file.response.message);
+      showRequestError(info.file.error, 'Chart 上传失败，请重试');
     }
   };
 
@@ -298,8 +308,17 @@ export const RepoPage: React.FC<RepoProps> = ({ name = '' }) => {
         >
           <Upload
             name="file"
-            action="/api/v1/artifacts/upload/chart"
-            headers={{ Authorization: `${getBearerToken()}` }}
+            customRequest={(options) => {
+              const controller = new AbortController();
+              service.ArtifactsController.upload_chart(
+                options.file as File,
+                (percent) => options.onProgress?.({ percent }),
+                controller.signal,
+              )
+                .then((result) => options.onSuccess?.(result))
+                .catch((error) => options.onError?.(error));
+              return { abort: () => controller.abort() };
+            }}
             onChange={handleUpload}
             accept=".tgz,.tar.gz"
             multiple={true}

@@ -1,9 +1,10 @@
 import services from '@/services';
+import { base64Decode } from '@/utils/base64';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { ProDescriptions } from '@ant-design/pro-components';
 import { Card, Divider } from 'antd';
 import { useEffect, useState } from 'react';
 import { Metadata } from './Metadata';
-import { base64Decode } from '@/utils/base64';
 interface Props {
   namespace: string;
   name: string;
@@ -12,13 +13,18 @@ const SecretDetail: React.FC<Props> = ({ namespace, name }) => {
   const [resource, setResource] = useState<any>();
 
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource_detail(
-      'secret',
-      namespace,
-      name,
-    );
-    if (code == 200) {
-      setResource(data);
+    try {
+      const { code, data } =
+        await services.KubernetesController.resource_detail(
+          'secret',
+          namespace,
+          name,
+        );
+      if (isSuccessCode(code)) {
+        setResource(data);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
 
@@ -37,6 +43,7 @@ const SecretDetail: React.FC<Props> = ({ namespace, name }) => {
           {Object.keys(resource?.data || {}).map((key) => {
             return (
               <ProDescriptions.Item
+                key={key}
                 label={key}
                 valueType="code"
                 dataIndex={['data', key]}

@@ -1,4 +1,5 @@
 import { logs } from '@/services/KubernetesController';
+import { getRequestErrorMessage, isSuccessCode } from '@/utils/request';
 import { DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import {
   Alert,
@@ -94,14 +95,14 @@ const PodLogs: React.FC<{ namespace: string; name: string; spec: any }> = ({
     )
       .then(({ code, data, message }) => {
         if (controller.signal.aborted) return;
-        if (code != 200) throw new Error(message || '日志读取失败');
+        if (!isSuccessCode(code)) throw new Error(message || '日志读取失败');
         setText(data.logs || '');
         setTruncated(data.truncated);
         setUpdated(new Date().toLocaleTimeString('zh-CN', { hour12: false }));
       })
       .catch((e) => {
         if (!controller.signal.aborted) {
-          setError(e.message || '无法读取日志');
+          setError(getRequestErrorMessage(e, '无法读取日志'));
           setAuto(false);
           setText('');
         }

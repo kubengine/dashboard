@@ -7,6 +7,7 @@ import DataPoint from '@/components/DataPoint';
 import PageHeading from '@/components/PageHeading';
 import Usage from '@/components/Usage';
 import service from '@/services';
+import { getRequestErrorMessage, isSuccessCode } from '@/utils/request';
 import {
   AppstoreOutlined,
   ArrowRightOutlined,
@@ -21,7 +22,7 @@ import NodesTable from './node';
 
 const Overview: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
   const [updated, setUpdated] = useState('');
   const [cpuUsageRate, setCpuUsageRate] = useState<DataPoint2[]>([]);
   const [memoryUsage, setMemoryUsage] = useState<DataPoint2[]>([]);
@@ -29,10 +30,10 @@ const Overview: React.FC = () => {
   const [metrics, setMetrics] = useState<DataPoint3[]>([]);
   const fetchData = useCallback(async () => {
     setLoading(true);
-    setError(false);
+    setError('');
     try {
       const { code, data } = await service.KubernetesController.overview();
-      if (code != 200 || !data) throw new Error('无法获取资源数据');
+      if (!isSuccessCode(code) || !data) throw new Error('无法获取资源数据');
       setCpuUsageRate(data.cpuUsageRate || []);
       setMemoryUsage(data.memoryUsageRate || []);
       setNodes(data.nodes || []);
@@ -65,8 +66,8 @@ const Overview: React.FC = () => {
         },
       ]);
       setUpdated(new Date().toLocaleTimeString('zh-CN', { hour12: false }));
-    } catch {
-      setError(true);
+    } catch (error) {
+      setError(getRequestErrorMessage(error, '无法获取资源数据'));
     } finally {
       setLoading(false);
     }
@@ -105,7 +106,7 @@ const Overview: React.FC = () => {
           type="error"
           showIcon
           message="资源数据加载失败"
-          description="请检查网络连接后刷新重试。已有数据保留供参考。"
+          description={`${error}。已有数据保留供参考。`}
           action={
             <Button
               size="small"

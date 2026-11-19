@@ -1,4 +1,5 @@
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { ProDescriptions } from '@ant-design/pro-components';
 import { Link } from '@umijs/max';
 import { Card, Divider, Space, Table } from 'antd';
@@ -60,14 +61,19 @@ const IngressDetail: React.FC<Props> = ({ namespace, name }) => {
   };
 
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource_detail(
-      'ingress',
-      namespace,
-      name,
-    );
-    if (code == 200) {
-      setResource(data);
-      setRules(combineSpecData(data?.spec || {}));
+    try {
+      const { code, data } =
+        await services.KubernetesController.resource_detail(
+          'ingress',
+          namespace,
+          name,
+        );
+      if (isSuccessCode(code)) {
+        setResource(data);
+        setRules(combineSpecData(data?.spec || {}));
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   const columns = [
@@ -158,6 +164,11 @@ const IngressDetail: React.FC<Props> = ({ namespace, name }) => {
               <Space direction="vertical" size="small">
                 {(resource?.endpoints || []).map((item: any) => (
                   <a
+                    key={
+                      item.ports
+                        ? `http://${item.host}:${item.ports}`
+                        : `http://${item.host}`
+                    }
                     href={
                       item.ports
                         ? `http://${item.host}:${item.ports}`

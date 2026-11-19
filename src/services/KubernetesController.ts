@@ -1,6 +1,9 @@
 import { request } from '@umijs/max';
 export async function overview() {
-  return request<API.Result>('/api/v1/k8s/overview', { method: 'GET' });
+  return request<API.Result>('/api/v1/k8s/overview', {
+    method: 'GET',
+    errorMode: 'local',
+  });
 }
 
 export async function node(name: string) {
@@ -87,6 +90,7 @@ export async function browse(
 ) {
   return request<API.Result>(`/api/v1/k8s/resource/${type}`, {
     method: 'GET',
+    errorMode: 'local',
     params,
     signal,
   });
@@ -102,7 +106,7 @@ export async function manifest(
     `/api/v1/k8s/manifest/${type}/${encodeURIComponent(
       namespace,
     )}/${encodeURIComponent(name)}`,
-    { method: 'GET', params: { reveal_secret }, signal },
+    { method: 'GET', errorMode: 'local', params: { reveal_secret }, signal },
   );
 }
 export async function events(
@@ -116,7 +120,12 @@ export async function events(
     `/api/v1/k8s/events/${type}/${encodeURIComponent(
       namespace,
     )}/${encodeURIComponent(name)}`,
-    { method: 'GET', params: { page, page_size: 10 }, signal },
+    {
+      method: 'GET',
+      errorMode: 'local',
+      params: { page, page_size: 10 },
+      signal,
+    },
   );
 }
 export async function logs(
@@ -129,6 +138,6 @@ export async function logs(
     `/api/v1/k8s/pods/${encodeURIComponent(namespace)}/${encodeURIComponent(
       name,
     )}/logs`,
-    { method: 'GET', params, signal },
+    { method: 'GET', errorMode: 'local', params, signal },
   );
 }

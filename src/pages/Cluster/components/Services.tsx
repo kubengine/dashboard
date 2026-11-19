@@ -1,5 +1,6 @@
 import Labels from '@/components/Labels';
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { Link } from '@umijs/max';
 import { Card, PaginationProps, Space, Table, Tag, Tooltip } from 'antd';
 import dayjs from 'dayjs';
@@ -21,31 +22,35 @@ const Services: React.FC<ServicesProps> = ({ name, namespace, type }) => {
     pageSize: 10,
   });
   const get_resource = async () => {
-    if (type) {
-      const { code, data } =
-        await services.KubernetesController.resource_detail(
-          type,
+    try {
+      if (type) {
+        const { code, data } =
+          await services.KubernetesController.resource_detail(
+            type,
+            namespace,
+            encodeURIComponent(encodeURIComponent(`${name}/service`)),
+          );
+        if (isSuccessCode(code)) {
+          const { services, listMeta } = data;
+          setCount(listMeta.totalItems);
+          setData(services);
+        }
+      } else {
+        const { code, data } = await services.KubernetesController.resource(
+          'service',
           namespace,
-          encodeURIComponent(encodeURIComponent(`${name}/service`)),
+          name,
+          paginationParams.pageSize,
+          paginationParams.current,
         );
-      if (code == 200) {
-        const { services, listMeta } = data;
-        setCount(listMeta.totalItems);
-        setData(services);
+        if (isSuccessCode(code)) {
+          const { services, listMeta } = data;
+          setCount(listMeta.totalItems);
+          setData(services);
+        }
       }
-    } else {
-      const { code, data } = await services.KubernetesController.resource(
-        'service',
-        namespace,
-        name,
-        paginationParams.pageSize,
-        paginationParams.current,
-      );
-      if (code == 200) {
-        const { services, listMeta } = data;
-        setCount(listMeta.totalItems);
-        setData(services);
-      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   useEffect(() => {
@@ -96,7 +101,10 @@ const Services: React.FC<ServicesProps> = ({ name, namespace, type }) => {
         return (
           <Space direction="vertical" size="middle">
             {internalEndpoint.ports.map((item, index) => (
-              <Tooltip title={item.protocol}>
+              <Tooltip
+                key={`${item.port}/${item.protocol}`}
+                title={item.protocol}
+              >
                 <Tag
                   key={`internalEndpoint-${index}`}
                   bordered={false}

@@ -1,5 +1,6 @@
 import Labels from '@/components/Labels';
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { Area } from '@ant-design/plots';
 import { Link } from '@umijs/max';
 import { Card, PaginationProps, Table, Tag } from 'antd';
@@ -146,17 +147,21 @@ const ResourcePods: React.FC<ResourcePodsProps> = ({
     },
   ];
   const get_stateful_set_pod = async () => {
-    const { code, data } = await services.KubernetesController.resource_pod(
-      type,
-      namespace,
-      name,
-      paginationParams.pageSize,
-      paginationParams.current,
-    );
-    if (code == 200) {
-      const { listMeta, pods } = data;
-      setCount(listMeta.totalItems);
-      setPods(pods);
+    try {
+      const { code, data } = await services.KubernetesController.resource_pod(
+        type,
+        namespace,
+        name,
+        paginationParams.pageSize,
+        paginationParams.current,
+      );
+      if (isSuccessCode(code)) {
+        const { listMeta, pods } = data;
+        setCount(listMeta.totalItems);
+        setPods(pods);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   const handleTableChange: PaginationProps['onChange'] = (

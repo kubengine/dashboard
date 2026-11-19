@@ -1,5 +1,6 @@
 import PageHeading from '@/components/PageHeading';
 import { browse } from '@/services/KubernetesController';
+import { getRequestErrorMessage, isSuccessCode } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { history, Link, useParams, useSearchParams } from '@umijs/max';
@@ -77,7 +78,7 @@ const Resources: React.FC = () => {
           { page, page_size: 100, sort_by: 'a,name' },
           controller.signal,
         );
-        if (result.code != 200) throw new Error('命名空间读取失败');
+        if (!isSuccessCode(result.code)) throw new Error('命名空间读取失败');
         const batch = result.data.namespaces.map(
           (row: ResourceRow) => row.objectMeta.name,
         );
@@ -117,7 +118,7 @@ const Resources: React.FC = () => {
     )
       .then(({ code, data, message }) => {
         if (controller.signal.aborted) return;
-        if (code != 200) throw new Error(message || '资源查询失败');
+        if (!isSuccessCode(code)) throw new Error(message || '资源查询失败');
         setRows(data[entry.key] || []);
         setTotal(data.listMeta.totalItems);
         setWarnings([
@@ -127,7 +128,7 @@ const Resources: React.FC = () => {
       })
       .catch((e) => {
         if (!controller.signal.aborted)
-          setError(e.message || '资源读取失败，请重试。');
+          setError(getRequestErrorMessage(e, '资源读取失败，请重试。'));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);

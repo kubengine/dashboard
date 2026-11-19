@@ -1,3 +1,4 @@
+import type { ErrorMode } from '@/utils/requestPolicy';
 import { request } from '@umijs/max';
 export async function get_projects(project_id_or_name: string = '') {
   let url = '/api/v1/artifacts/projects';
@@ -183,6 +184,7 @@ export async function create_image_import_task(
   formData.append('file', file);
   return request<API.Result>('/api/v1/artifacts/image-import-tasks', {
     method: 'POST',
+    errorMode: 'local',
     data: formData,
     onUploadProgress,
   });
@@ -191,17 +193,22 @@ export async function create_image_import_task(
 export async function get_image_import_tasks(
   page_size: number = 10,
   page: number = 1,
+  errorMode: ErrorMode = 'global',
 ) {
   return request<API.Result>('/api/v1/artifacts/image-import-tasks', {
     method: 'GET',
     params: { page_size, page },
+    errorMode,
   });
 }
 
-export async function get_image_import_task(task_id: number) {
+export async function get_image_import_task(
+  task_id: number,
+  errorMode: ErrorMode = 'global',
+) {
   return request<API.Result>(
     `/api/v1/artifacts/image-import-tasks/${task_id}`,
-    { method: 'GET' },
+    { method: 'GET', errorMode },
   );
 }
 
@@ -210,4 +217,23 @@ export async function retry_image_import_task(task_id: number) {
     `/api/v1/artifacts/image-import-tasks/${task_id}/retry`,
     { method: 'POST' },
   );
+}
+
+export async function upload_chart(
+  file: File,
+  onProgress?: (percent: number) => void,
+  signal?: AbortSignal,
+) {
+  const data = new FormData();
+  data.append('file', file);
+  return request<API.Result>('/api/v1/artifacts/upload/chart', {
+    method: 'POST',
+    data,
+    signal,
+    errorMode: 'local',
+    onUploadProgress: (event: any) =>
+      onProgress?.(
+        event.total ? Math.round((event.loaded / event.total) * 100) : 0,
+      ),
+  });
 }

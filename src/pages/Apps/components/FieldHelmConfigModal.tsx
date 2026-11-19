@@ -1,5 +1,6 @@
 import services from '@/services';
 import { AppFieldConfig, HelmProps } from '@/services/AppController';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { yamlToProperties } from '@/utils/yaml';
 import {
   Form,
@@ -45,60 +46,68 @@ export const FieldHelmConfigModal: React.FC<FieldHelmConfigModalProps> = ({
   ];
 
   const fetchArtifacts = async (current = 1, pageSize = 100) => {
-    const { code, data } = await services.ArtifactsController.get_artifacts(
-      'charts',
-      encodeURIComponent(encodeURIComponent(chartName)),
-      '',
-      pageSize,
-      current,
-    );
-    if (code == 200) {
-      const options = data
-        .filter(
-          (item: {
-            extra_attrs: { appVersion: any; version: any };
-            digest: any;
-          }) => {
-            // 过滤：确保extra_attrs、appVersion、version、digest都存在，避免空值
-            return (
-              item?.extra_attrs?.appVersion &&
-              item?.extra_attrs?.version &&
-              item?.digest
-            );
-          },
-        )
-        .map(
-          (item: {
-            extra_attrs: { appVersion: any; version: any };
-            digest: any;
-          }) => ({
-            label: `${item.extra_attrs.version}(${item.extra_attrs.appVersion})`,
-            value: item.digest,
-          }),
-        );
-      if (options.length > 0) {
-        setTopSelectOptions(options);
-        setTopSelectValue(options[0].value);
+    try {
+      const { code, data } = await services.ArtifactsController.get_artifacts(
+        'charts',
+        encodeURIComponent(encodeURIComponent(chartName)),
+        '',
+        pageSize,
+        current,
+      );
+      if (isSuccessCode(code)) {
+        const options = data
+          .filter(
+            (item: {
+              extra_attrs: { appVersion: any; version: any };
+              digest: any;
+            }) => {
+              // 过滤：确保extra_attrs、appVersion、version、digest都存在，避免空值
+              return (
+                item?.extra_attrs?.appVersion &&
+                item?.extra_attrs?.version &&
+                item?.digest
+              );
+            },
+          )
+          .map(
+            (item: {
+              extra_attrs: { appVersion: any; version: any };
+              digest: any;
+            }) => ({
+              label: `${item.extra_attrs.version}(${item.extra_attrs.appVersion})`,
+              value: item.digest,
+            }),
+          );
+        if (options.length > 0) {
+          setTopSelectOptions(options);
+          setTopSelectValue(options[0].value);
+        }
+        //   if (data.length > 0) {
+        //     setSelectedArtifacts(data[0]);
+        //   }
       }
-      //   if (data.length > 0) {
-      //     setSelectedArtifacts(data[0]);
-      //   }
+    } catch (error) {
+      showRequestError(error);
     }
   };
-  const fetchArtifactValue = async (current = 1, pageSize = 100) => {
-    const { code, data } = await services.ArtifactsController.chart_values(
-      'charts',
-      encodeURIComponent(encodeURIComponent(chartName)),
-      topSelectValue || '',
-    );
-    if (code == 200) {
-      const mapData = yamlToProperties(data);
-      setHelmConfigOptions(
-        mapData.map(([key, value]) => ({
-          label: value && value != '' ? `${key}(默认值:${value})` : key,
-          value: key,
-        })),
+  const fetchArtifactValue = async () => {
+    try {
+      const { code, data } = await services.ArtifactsController.chart_values(
+        'charts',
+        encodeURIComponent(encodeURIComponent(chartName)),
+        topSelectValue || '',
       );
+      if (isSuccessCode(code)) {
+        const mapData = yamlToProperties(data);
+        setHelmConfigOptions(
+          mapData.map(([key, value]) => ({
+            label: value && value != '' ? `${key}(默认值:${value})` : key,
+            value: key,
+          })),
+        );
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
   useEffect(() => {

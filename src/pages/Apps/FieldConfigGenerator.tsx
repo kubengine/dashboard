@@ -1,4 +1,3 @@
-import type { DynamicFieldConfig } from '@/services/AppConfigController';
 import {
   CheckOutlined,
   CopyOutlined,
@@ -23,6 +22,20 @@ import {
   Typography,
 } from 'antd';
 import { useEffect, useState } from 'react';
+
+// 仅用于本页的配置生成器，不依赖不存在的 API 控制器。
+interface DynamicFieldConfig {
+  name: string;
+  label: string;
+  type: string;
+  rules?: { required?: boolean; message?: string }[];
+  initialValue?: any;
+  fieldProps?: { placeholder?: string; allowClear?: boolean; options?: any[] };
+  required?: boolean;
+  placeholder?: string;
+  allowClear?: boolean;
+  options?: any[];
+}
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -148,21 +161,6 @@ const FieldConfigGenerator: React.FC = () => {
     }
   }, [currentIndex, currentField, form]);
 
-  // 字段类型切换联动
-  const handleTypeChange = (type: string) => {
-    // 重置类型相关配置项
-    form.setFieldsValue({
-      initialValue: '',
-      placeholder: `请输入${currentField.label}`,
-      allowClear: true,
-      options: '',
-    });
-    setJsonError('');
-
-    // 立即更新当前字段类型（预览同步）
-    updateField(currentIndex, { type });
-  };
-
   // 校验选项配置JSON
   const handleOptionsChange = (value: string) => {
     const result = validateJSON(value);
@@ -223,6 +221,21 @@ const FieldConfigGenerator: React.FC = () => {
     };
 
     setFields(newFields);
+  };
+
+  // 字段类型切换联动
+  const handleTypeChange = (type: string) => {
+    // 重置类型相关配置项
+    form.setFieldsValue({
+      initialValue: '',
+      placeholder: `请输入${currentField.label}`,
+      allowClear: true,
+      options: '',
+    });
+    setJsonError('');
+
+    // 立即更新当前字段类型（预览同步）
+    updateField(currentIndex, { type });
   };
 
   // 处理表单提交

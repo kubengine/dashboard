@@ -1,4 +1,5 @@
 import services from '@/services';
+import { isSuccessCode, showRequestError } from '@/utils/request';
 import { ProDescriptions } from '@ant-design/pro-components';
 import { Link } from '@umijs/max';
 import { Card, Divider, Space, Tag } from 'antd';
@@ -12,13 +13,18 @@ const PVDetail: React.FC<PVDetailProps> = ({ namespace, name }) => {
   const [resource, setResource] = useState<any>();
 
   const get_resource = async () => {
-    const { code, data } = await services.KubernetesController.resource_detail(
-      'persistentvolume',
-      namespace,
-      name,
-    );
-    if (code == 200) {
-      setResource(data);
+    try {
+      const { code, data } =
+        await services.KubernetesController.resource_detail(
+          'persistentvolume',
+          namespace,
+          name,
+        );
+      if (isSuccessCode(code)) {
+        setResource(data);
+      }
+    } catch (error) {
+      showRequestError(error);
     }
   };
 
@@ -51,7 +57,7 @@ const PVDetail: React.FC<PVDetailProps> = ({ namespace, name }) => {
               return (
                 <Space direction="vertical" size="small">
                   {(resource?.accessModes || []).map((item: any) => (
-                    <Tag>{item}</Tag>
+                    <Tag key={item}>{item}</Tag>
                   ))}
                 </Space>
               );
@@ -103,6 +109,7 @@ const PVDetail: React.FC<PVDetailProps> = ({ namespace, name }) => {
                     ).map(([key, value]) => {
                       return (
                         <ProDescriptions.Item
+                          key={key}
                           label={key}
                           renderText={() => value}
                         />

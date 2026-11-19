@@ -1,6 +1,7 @@
 import PageHeading from '@/components/PageHeading';
 import services from '@/services';
 import { App } from '@/services/AppController';
+import { isSuccessCode } from '@/utils/request';
 import {
   AppstoreOutlined,
   ArrowRightOutlined,
@@ -88,7 +89,7 @@ const Store: React.FC = () => {
       activeCategory,
     )
       .then(({ code, data }) => {
-        if (code != 200) throw new Error('加载失败');
+        if (!isSuccessCode(code)) throw new Error('加载失败');
         if (active) {
           setApps(data.data || []);
           setTotal(data.total || 0);
