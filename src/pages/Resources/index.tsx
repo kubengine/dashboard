@@ -2,7 +2,11 @@ import PageHeading from '@/components/PageHeading';
 import { browse } from '@/services/KubernetesController';
 import { getRequestErrorMessage, isSuccessCode } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
-import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import { history, Link, useParams, useSearchParams } from '@umijs/max';
 import {
   Alert,
@@ -30,6 +34,7 @@ import {
   statusText,
   summary,
 } from './catalog';
+import CreateResources from './CreateResources';
 import { eventColumns } from './Events';
 import './resources.less';
 
@@ -58,6 +63,8 @@ const Resources: React.FC = () => {
   const [updated, setUpdated] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [auto, setAuto] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [namespaceRefresh, setNamespaceRefresh] = useState(0);
   const update = (values: Record<string, string | number | undefined>) => {
     const next = new URLSearchParams(params);
     Object.entries(values).forEach(([key, value]) =>
@@ -94,7 +101,7 @@ const Resources: React.FC = () => {
       if (!controller.signal.aborted) setNamespaceError(true);
     });
     return () => controller.abort();
-  }, []);
+  }, [namespaceRefresh]);
   useEffect(() => {
     const controller = new AbortController();
     if (!entry) return;
@@ -247,7 +254,14 @@ const Resources: React.FC = () => {
         title="资源中心"
         description="查看整个 Kubernetes 集群的资源、依赖关系与运行状况。"
         extra={
-          <Space>
+          <Space wrap>
+            <Button
+              type="primary"
+              icon={<PlusOutlined aria-hidden="true" />}
+              onClick={() => setCreating(true)}
+            >
+              通过 YAML 创建
+            </Button>
             <span className="ke-resource-secondary">
               {updated && `更新于 ${updated}`}
             </span>
@@ -261,6 +275,17 @@ const Resources: React.FC = () => {
           </Space>
         }
       />
+      {creating && (
+        <CreateResources
+          namespace={namespace}
+          namespaces={namespaces}
+          onClose={() => setCreating(false)}
+          onCreated={() => {
+            setRefresh((value) => value + 1);
+            setNamespaceRefresh((value) => value + 1);
+          }}
+        />
+      )}
       <Card className="ke-resource-workspace">
         <Tabs
           activeKey={entry.group}

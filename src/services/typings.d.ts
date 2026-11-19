@@ -10,10 +10,10 @@ declare namespace API {
     expires_at: string;
     renewed: boolean;
   };
-  type Result = {
+  type Result<T = any> = {
     code: number;
     message: string;
-    data: any;
+    data: T;
     request_id?: string | null;
     error_code?: string | null;
     details?:

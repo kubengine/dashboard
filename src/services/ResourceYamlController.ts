@@ -103,3 +103,49 @@ export const version = (
     params: { reveal_secret },
     errorMode: 'local',
   });
+
+export interface CreateYamlInput {
+  yaml_text: string;
+  namespace: string;
+  comment: string;
+}
+export interface CreateResourceItem {
+  index: number;
+  apiVersion: string;
+  kind: string;
+  name: string;
+  namespace: string;
+  status: 'validated' | 'deferred' | 'created' | 'failed' | 'unknown';
+  message?: string;
+  previewYaml?: string;
+  revisionId?: number;
+  version?: number;
+  replayed?: boolean;
+}
+export interface CreateYamlPreview {
+  items: CreateResourceItem[];
+  valid: boolean;
+  previewToken: string;
+}
+export interface CreateYamlResult {
+  items: CreateResourceItem[];
+  created: number;
+  total: number;
+  complete: boolean;
+}
+export const preview_create = (data: CreateYamlInput) =>
+  request<API.Result<CreateYamlPreview>>('/api/v1/k8s/resources/preview', {
+    method: 'POST',
+    data,
+    timeout: 90000,
+    errorMode: 'local',
+  });
+export const create_resources = (
+  data: CreateYamlInput & { request_id: string; preview_token: string },
+) =>
+  request<API.Result<CreateYamlResult>>('/api/v1/k8s/resources/create', {
+    method: 'POST',
+    data,
+    timeout: 150000,
+    errorMode: 'local',
+  });

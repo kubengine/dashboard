@@ -315,3 +315,36 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+.ke-yaml-create {
+  .ant-alert {
+    margin-bottom: 16px;
+  }
+
+  .ant-modal-body {
+    max-height: calc(100vh - 210px);
+    overflow-y: auto;
+  }
+
+  .ant-table-cell {
+    overflow-wrap: anywhere;
+  }
+}
+
+.ke-yaml-create-options {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(240px, 2fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.ke-yaml-create-upload {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .ke-yaml-create-options {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
