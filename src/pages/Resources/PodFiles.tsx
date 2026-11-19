@@ -6,6 +6,7 @@ import {
   PodFile,
   upload_file,
 } from '@/services/PodOperationsController';
+import { usePermissions } from '@/utils/permissions';
 import {
   getRequestErrorMessage,
   isSuccessCode,
@@ -72,6 +73,9 @@ const PodFiles: React.FC<{
   name: string;
   container: string;
 }> = ({ namespace, name, container }) => {
+  const { can } = usePermissions();
+  const writable = can('pod.files.write', namespace);
+  const readable = can('pod.files.read', namespace);
   const [directory, setDirectory] = useState<Directory>();
   const [requested, setRequested] = useState<string>();
   const [address, setAddress] = useState('');
@@ -103,6 +107,20 @@ const PodFiles: React.FC<{
     setLoading(true);
     setError('');
     setDirectory(undefined);
+    if (!readable) {
+      const path = requested || '/';
+      setDirectory({
+        path,
+        entries: [],
+        windows: /^[a-zA-Z]:/.test(path),
+        container,
+        maxFileBytes: 100 * 1024 ** 2,
+        transferTimeoutSeconds: 120,
+      });
+      setAddress(path);
+      setLoading(false);
+      return () => controller.abort();
+    }
     list_files(namespace, name, container, requested, controller.signal)
       .then(({ code, data, message }) => {
         if (controller.signal.aborted) return;
@@ -117,7 +135,7 @@ const PodFiles: React.FC<{
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [namespace, name, container, requested, refresh]);
+  }, [namespace, name, container, requested, refresh, readable]);
   const navigate = (path: string) => {
     setRequested(path);
     setFilter('');
@@ -302,14 +320,14 @@ const PodFiles: React.FC<{
         <Space wrap>
           <Button
             icon={<FileAddOutlined aria-hidden="true" />}
-            disabled={!directory}
+            disabled={!writable || !directory}
             onClick={() => openEditor('touch')}
           >
             新建文件
           </Button>
           <Button
             icon={<FolderAddOutlined aria-hidden="true" />}
-            disabled={!directory}
+            disabled={!writable || !directory}
             onClick={() => openEditor('mkdir')}
           >
             新建文件夹
@@ -317,7 +335,7 @@ const PodFiles: React.FC<{
           <Button
             type="primary"
             icon={<UploadOutlined aria-hidden="true" />}
-            disabled={!directory}
+            disabled={!writable || !directory}
             onClick={() => input.current?.click()}
           >
             上传文件
@@ -468,6 +486,7 @@ const PodFiles: React.FC<{
                 <Button
                   size="small"
                   icon={<EditOutlined aria-hidden="true" />}
+                  disabled={!writable}
                   onClick={() => openEditor('rename', row)}
                 >
                   重命名
@@ -476,7 +495,7 @@ const PodFiles: React.FC<{
                   size="small"
                   danger
                   icon={<DeleteOutlined aria-hidden="true" />}
-                  disabled={row.type === 'other'}
+                  disabled={!writable || row.type === 'other'}
                   onClick={() => {
                     setRecursive(false);
                     setError('');

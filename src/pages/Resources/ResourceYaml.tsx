@@ -5,6 +5,7 @@ import {
   Revision,
   YamlPreview,
 } from '@/services/ResourceYamlController';
+import { usePermissions } from '@/utils/permissions';
 import { getRequestErrorMessage, isSuccessCode } from '@/utils/request';
 import {
   DownloadOutlined,
@@ -99,6 +100,7 @@ const ResourceYaml: React.FC<{
   reveal: boolean;
   onApplied: () => void;
 }> = ({ type, namespace, name, yaml, reveal, onApplied }) => {
+  const { can } = usePermissions();
   const [opening, setOpening] = useState(false);
   const [editing, setEditing] = useState(false);
   const [base, setBase] = useState<{
@@ -277,7 +279,11 @@ const ResourceYaml: React.FC<{
           type="primary"
           icon={<EditOutlined aria-hidden="true" />}
           loading={opening}
-          disabled={type === 'event' || (type === 'secret' && !reveal)}
+          disabled={
+            !can('resource.update', namespace) ||
+            type === 'event' ||
+            (type === 'secret' && !reveal)
+          }
           onClick={open}
         >
           编辑 YAML

@@ -1,5 +1,6 @@
 import PageHeading from '@/components/PageHeading';
 import { browse } from '@/services/KubernetesController';
+import { usePermissions } from '@/utils/permissions';
 import { getRequestErrorMessage, isSuccessCode } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
 import {
@@ -39,6 +40,8 @@ import { eventColumns } from './Events';
 import './resources.less';
 
 const Resources: React.FC = () => {
+  const { admin, can, user } = usePermissions();
+  const visibleCatalog = catalog.filter((item) => admin || !item.cluster);
   const { type = 'pod' } = useParams();
   const [params, setParams] = useSearchParams();
   const entry = catalog.find((item) => item.kind === type);
@@ -101,10 +104,10 @@ const Resources: React.FC = () => {
       if (!controller.signal.aborted) setNamespaceError(true);
     });
     return () => controller.abort();
-  }, [namespaceRefresh]);
+  }, [namespaceRefresh, user?.revision]);
   useEffect(() => {
     const controller = new AbortController();
-    if (!entry) return;
+    if (!entry || (entry.cluster && !admin)) return;
     setLoading(true);
     setError('');
     setRows([]);
@@ -152,6 +155,7 @@ const Resources: React.FC = () => {
     sort,
     refresh,
     entry,
+    user?.revision,
   ]);
   useEffect(() => {
     if (!auto) return;
@@ -163,7 +167,7 @@ const Resources: React.FC = () => {
     if (namespace) next.set('namespace', namespace);
     history.push(`/resources/${kind}?${next}`);
   };
-  if (!entry)
+  if (!entry || (entry.cluster && !admin))
     return (
       <Alert
         type="error"
@@ -256,6 +260,7 @@ const Resources: React.FC = () => {
         extra={
           <Space wrap>
             <Button
+              disabled={!can('resource.create', namespace || undefined)}
               type="primary"
               icon={<PlusOutlined aria-hidden="true" />}
               onClick={() => setCreating(true)}
@@ -290,9 +295,11 @@ const Resources: React.FC = () => {
         <Tabs
           activeKey={entry.group}
           onChange={(key) =>
-            navigate(catalog.find((item) => item.group === key)!.kind)
+            navigate(visibleCatalog.find((item) => item.group === key)!.kind)
           }
-          items={groups}
+          items={groups.filter((group) =>
+            visibleCatalog.some((item) => item.group === group.key),
+          )}
         />
         <div className="ke-resource-toolbar">
           <div>
@@ -305,7 +312,7 @@ const Resources: React.FC = () => {
               className="ke-kind-select"
               showSearch
               optionFilterProp="label"
-              options={catalog
+              options={visibleCatalog
                 .filter((item) => item.group === entry.group)
                 .map((item) => ({ value: item.kind, label: item.title }))}
             />
@@ -324,7 +331,11 @@ const Resources: React.FC = () => {
               options={[
                 {
                   value: '',
-                  label: entry.cluster ? '集群级资源' : '全部命名空间',
+                  label: entry.cluster
+                    ? '集群级资源'
+                    : admin
+                    ? '全部命名空间'
+                    : '全部授权命名空间',
                 },
                 ...namespaces.map((value) => ({ value, label: value })),
               ]}
@@ -436,7 +447,11 @@ const Resources: React.FC = () => {
         <div className="ke-resource-list-heading">
           <h2>{entry.title}</h2>
           <span aria-live="polite">
-            共 {total} 项{!entry.cluster && ` · ${namespace || '全部命名空间'}`}
+            共 {total} 项
+            {!entry.cluster &&
+              ` · ${
+                namespace || (admin ? '全部命名空间' : '全部授权命名空间')
+              }`}
           </span>
         </div>
         <Table

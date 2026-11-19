@@ -3,12 +3,14 @@ import { history } from '@umijs/max';
 import { notification } from 'antd';
 import type { HTMLAttributes, KeyboardEvent } from 'react';
 import { cloneElement, createElement, isValidElement } from 'react';
+import AuthorizationBoundary from './components/AuthorizationBoundary';
 import Brand from './components/Brand';
 import {
   ConsoleFooter,
   ConsoleHeader,
   WorkspaceLabel,
 } from './components/ConsoleChrome';
+import { current_user } from './services/IdentityController';
 import { logout } from './services/UserController';
 import { endSession, getAuthStore, isTokenExpired } from './utils/auth';
 import { requireLogin } from './utils/request';
@@ -21,6 +23,9 @@ const redirectToLogin = () => {
 export async function getInitialState() {
   const store = getAuthStore();
   return {
+    currentUser: !isTokenExpired()
+      ? await current_user().catch(() => undefined)
+      : undefined,
     avatar: '/assets/kubeengine-mark.svg',
     user: {
       authType: 'token' as const,
@@ -112,17 +117,21 @@ export const layout: RunTimeLayoutConfig = ({
       ),
     childrenRender: (children) =>
       createElement(
-        'div',
-        { className: 'ke-workbench' },
+        AuthorizationBoundary,
+        null,
         createElement(
           'div',
-          { className: 'ke-desktop-header' },
-          createElement(ConsoleHeader, { onLogout: handleLogout }),
-        ),
-        createElement(
-          'div',
-          { id: 'ke-main', className: 'ke-main', tabIndex: -1 },
-          children,
+          { className: 'ke-workbench' },
+          createElement(
+            'div',
+            { className: 'ke-desktop-header' },
+            createElement(ConsoleHeader, { onLogout: handleLogout }),
+          ),
+          createElement(
+            'div',
+            { id: 'ke-main', className: 'ke-main', tabIndex: -1 },
+            children,
+          ),
         ),
       ),
     onPageChange: () => {
@@ -131,9 +140,21 @@ export const layout: RunTimeLayoutConfig = ({
         requireLogin();
         return;
       }
+      if (
+        initialState?.currentUser &&
+        initialState.currentUser.role !== 'platform_admin' &&
+        /^\/(home|nodeDetail|apps|artifacts|admin)(\/|$)/.test(
+          history.location.pathname,
+        )
+      ) {
+        history.replace('/resources/pod');
+        return;
+      }
       const store = getAuthStore();
       if (initialState?.user.accessToken !== store.token?.accessToken) {
         setInitialState({
+          ...initialState,
+          currentUser: initialState?.currentUser,
           avatar: initialState?.avatar || '/assets/kubeengine-mark.svg',
           user: {
             authType: 'token',

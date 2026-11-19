@@ -1,4 +1,5 @@
 import { getAuthStore } from '@/utils/auth';
+import { usePermissions } from '@/utils/permissions';
 import {
   AppstoreOutlined,
   DeploymentUnitOutlined,
@@ -15,6 +16,9 @@ import React, { useState } from 'react';
 
 const destinations = [
   { title: '资源总览', group: '工作空间', path: '/home' },
+  { title: '用户与授权', group: '权限与审计', path: '/admin/users' },
+  { title: '操作审计', group: '权限与审计', path: '/admin/audit' },
+  { title: '我的账户', group: '工作空间', path: '/account' },
   { title: '资源中心', group: '工作空间', path: '/resources' },
   { title: '镜像仓库', group: '制品管理', path: '/artifacts/imagesRepo' },
   { title: '镜像导入', group: '制品管理', path: '/artifacts/imageImports' },
@@ -29,12 +33,16 @@ export const ConsoleHeader: React.FC<{
   onToggleMenu?: () => void;
 }> = ({ onLogout, onToggleMenu }) => {
   const { pathname } = useLocation();
+  const { admin } = usePermissions();
+  const visibleDestinations = destinations.filter(
+    (item) => admin || ['/resources', '/account'].includes(item.path),
+  );
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const active =
-    destinations.find((item) => item.path === pathname) ||
+    visibleDestinations.find((item) => item.path === pathname) ||
     (/^\/resources\/[^/]+$/.test(pathname)
-      ? destinations.find((item) => item.path === '/resources')
+      ? visibleDestinations.find((item) => item.path === '/resources')
       : undefined);
   const group =
     active?.group ||
@@ -84,6 +92,11 @@ export const ConsoleHeader: React.FC<{
             menu={{
               items: [
                 {
+                  key: 'account',
+                  label: '我的账户与密码',
+                  onClick: () => history.push('/account'),
+                },
+                {
                   key: 'logout',
                   label: '退出登录',
                   icon: <LogoutOutlined aria-hidden="true" />,
@@ -117,7 +130,7 @@ export const ConsoleHeader: React.FC<{
           allowClear
         />
         <nav className="ke-quick-results" aria-label="功能搜索结果">
-          {destinations
+          {visibleDestinations
             .filter((item) =>
               `${item.title}${item.group}`.includes(query.trim()),
             )
@@ -137,7 +150,7 @@ export const ConsoleHeader: React.FC<{
                 <span aria-hidden="true">↗</span>
               </button>
             ))}
-          {!destinations.some((item) =>
+          {!visibleDestinations.some((item) =>
             `${item.title}${item.group}`.includes(query.trim()),
           ) && (
             <Empty

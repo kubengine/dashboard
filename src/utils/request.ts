@@ -43,10 +43,19 @@ export const requestConfig: RequestConfig = {
         await policy.fulfilled(response);
         return response;
       },
-      (error: any) => policy.rejected(error),
+      (error: any) =>
+        policy.rejected(error).catch((failure) => {
+          if (failure.kind === 'forbidden')
+            window.dispatchEvent(new Event('kubengine:permissions-stale'));
+          throw failure;
+        }),
     ],
   ],
   errorConfig: {
-    errorHandler: (error: any, options: any) => policy.handle(error, options),
+    errorHandler: (error: any, options: any) => {
+      if (error?.kind === 'forbidden')
+        window.dispatchEvent(new Event('kubengine:permissions-stale'));
+      return policy.handle(error, options);
+    },
   },
 };

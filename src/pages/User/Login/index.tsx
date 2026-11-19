@@ -1,5 +1,6 @@
 import Brand from '@/components/Brand';
 import service from '@/services';
+import { current_user } from '@/services/IdentityController';
 import { saveToken } from '@/utils/auth';
 import { getRequestErrorMessage } from '@/utils/request';
 import {
@@ -13,10 +14,11 @@ import {
 import { Helmet, history, useModel } from '@umijs/max';
 import { Alert, Button, Form, Input } from 'antd';
 import React, { useState } from 'react';
+import { flushSync } from 'react-dom';
 import './index.less';
 
 const Login: React.FC = () => {
-  const { initialState, setInitialState } = useModel('@@initialState');
+  const { setInitialState } = useModel('@@initialState');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const handleLogin = async (values: {
@@ -33,16 +35,23 @@ const Login: React.FC = () => {
         expiresAt: data.expires_at,
         username: values.username,
       });
-      setInitialState({
-        ...initialState,
-        avatar: '/assets/kubeengine-mark.svg',
-        user: {
-          accessToken: data.access_token,
-          tokenExpiresAt: store.token.expiresAt,
-          authType: 'token',
-        },
+      const currentUser = await current_user();
+      // Publish permissions before Umi mounts and evaluates the target route.
+      flushSync(() => {
+        setInitialState((previous) => ({
+          ...previous,
+          currentUser,
+          avatar: '/assets/kubeengine-mark.svg',
+          user: {
+            accessToken: data.access_token,
+            tokenExpiresAt: store.token.expiresAt,
+            authType: 'token',
+          },
+        }));
       });
-      history.push('/');
+      history.push(
+        currentUser.role === 'platform_admin' ? '/home' : '/resources/pod',
+      );
     } catch (error) {
       setError(getRequestErrorMessage(error, '登录失败，请重试'));
     } finally {

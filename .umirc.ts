@@ -27,6 +27,7 @@ export default defineConfig({
     { path: '/', redirect: '/home' },
     {
       name: '资源总览',
+      access: 'admin',
       icon: 'dashboard',
       path: '/home',
       component: '@/pages/Home',
@@ -49,12 +50,14 @@ export default defineConfig({
     },
     {
       name: '节点信息',
+      access: 'admin',
       path: '/nodeDetail',
       component: '@/pages/Home/nodeDetail',
       hideInMenu: true,
     },
     {
       name: '制品管理',
+      access: 'admin',
       icon: 'project',
       path: '/artifacts',
       routes: [
@@ -89,6 +92,7 @@ export default defineConfig({
     },
     {
       name: '应用中心',
+      access: 'admin',
       icon: 'appstore',
       path: '/apps',
       routes: [
@@ -137,6 +141,26 @@ export default defineConfig({
           hideInMenu: true,
         },
       ],
+    },
+    {
+      name: '用户与授权',
+      path: '/admin/users',
+      component: '@/pages/Identity/Users',
+      access: 'admin',
+      icon: 'team',
+    },
+    {
+      name: '操作审计',
+      path: '/admin/audit',
+      component: '@/pages/Identity/Audit',
+      access: 'admin',
+      icon: 'audit',
+    },
+    {
+      name: '我的账户',
+      path: '/account',
+      component: '@/pages/Identity/Profile',
+      icon: 'user',
     },
     // { name: "ws测试", path: '/wstest', component: '@/pages/WsDemo' },
     { path: '*', layout: false, component: './404' },

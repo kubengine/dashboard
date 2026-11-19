@@ -10,7 +10,7 @@ const root = path.resolve(__dirname, '..');
 function environment() {
   const store = new Map();
   const window = new EventTarget();
-  window.location = { href: 'https://dashboard.test/apps/cluster' };
+  window.location = new URL('https://dashboard.test/apps/cluster');
   const timers = new Map();
   let nextTimer = 0;
   const sockets = [];
@@ -40,6 +40,7 @@ function environment() {
     Event,
     window,
     URL,
+    crypto: require('node:crypto').webcrypto,
     WebSocket,
     atob,
     console,
@@ -100,7 +101,25 @@ function environment() {
                 warning: (value) => notifications.push(value),
               },
             };
-          if (dependency === 'react') return { createElement: () => null };
+          if (dependency === 'react')
+            return {
+              createElement: (type, props) => ({ type, props }),
+            };
+          // Authentication checks do not mount the presentation components.
+          if (
+            [
+              './components/Brand',
+              './components/AuthorizationBoundary',
+            ].includes(dependency)
+          )
+            return { default: () => null };
+          if (dependency === './components/ConsoleChrome')
+            return {
+              ConsoleFooter: () => null,
+              ConsoleHeader: () => null,
+              WorkspaceLabel: () => null,
+            };
+          if (dependency.startsWith('@/')) return load(dependency.slice(2));
           return load(
             path.posix.normalize(
               path.posix.join(path.posix.dirname(name), dependency),
@@ -380,7 +399,7 @@ check(
 );
 check(
   'request header access handles method defaults and callable getters',
-  () => {
+  async () => {
     const env = environment();
     login(env);
     const intercept = env.app().request.requestInterceptors[0];
@@ -396,28 +415,28 @@ check(
     for (const key of ['Authorization', 'authorization']) {
       const headers = { get: {}, [key]: 'Bearer snapshot' };
       assert.equal(
-        intercept({ url: '/api/v1/logout', headers }).headers,
-        headers,
+        intercept({ url: '/api/v1/logout', headers }).headers[key],
+        'Bearer snapshot',
       );
     }
     const headers = {
       value: 'Bearer snapshot',
       get(name) {
-        assert.equal(this, headers);
-        assert.equal(name, 'Authorization');
-        return this.value;
+        return name === 'Authorization' ? this.value : undefined;
       },
     };
     assert.equal(
-      intercept({ url: '/api/v1/logout', headers }).headers,
-      headers,
+      intercept({ url: '/api/v1/logout', headers }).headers.get(
+        'Authorization',
+      ),
+      'Bearer snapshot',
     );
     headers.value = env.auth.getBearerToken();
     const renewed = jwt('getter-renewed');
-    env.app().request.responseInterceptors[0]({
+    await env.app().request.responseInterceptors[0][0]({
       status: 200,
-      config: { headers },
-      data: { new_access_token: renewed, token_type: 'Bearer' },
+      config: { url: '/api/v1/app/list', headers },
+      data: { code: 200, new_access_token: renewed, token_type: 'Bearer' },
     });
     assert.equal(env.auth.getAuthStore().token.accessToken, renewed);
   },
@@ -445,7 +464,7 @@ check(
     for (const intercept of app.request.requestInterceptors)
       client.interceptors.request.use(intercept);
     for (const intercept of app.request.responseInterceptors)
-      client.interceptors.response.use(intercept);
+      client.interceptors.response.use(...intercept);
     for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
       await client.request({ method, url: '/api/v1/app/list' });
       assert.equal(
@@ -473,16 +492,19 @@ check(
 );
 check(
   'actual response and 401 interceptors keep renewed session safe from stale requests',
-  () => {
+  async () => {
     const env = environment();
     login(env);
     const previous = env.auth.getBearerToken();
     const app = env.app();
     const renewed = jwt('intercepted', 1200);
-    app.request.responseInterceptors[0]({
+    await app.request.responseInterceptors[0][0]({
       status: 200,
-      config: { headers: { Authorization: previous } },
-      data: { new_access_token: renewed, token_type: 'Bearer' },
+      config: {
+        url: '/api/v1/app/list',
+        headers: { Authorization: previous },
+      },
+      data: { code: 200, new_access_token: renewed, token_type: 'Bearer' },
     });
     const unauthorized = (bearer) => ({
       response: {
@@ -490,29 +512,30 @@ check(
         config: { url: '/api/v1/app/list', headers: { Authorization: bearer } },
       },
     });
-    assert.throws(() =>
-      app.request.errorConfig.errorHandler(unauthorized(previous), {}),
+    await assert.rejects(
+      app.request.responseInterceptors[0][1](unauthorized(previous)),
     );
     assert.equal(env.auth.getAuthStore().token.accessToken, renewed);
-    assert.throws(() =>
-      app.request.errorConfig.errorHandler(
+    await assert.rejects(
+      app.request.responseInterceptors[0][1](
         unauthorized(env.auth.getBearerToken()),
-        {},
       ),
     );
     assert.equal(env.auth.getBearerToken(), '');
     assert.equal(env.history.location.pathname, '/user/login');
-    assert.doesNotThrow(() =>
-      app.request.errorConfig.errorThrower({ access_token: renewed }),
-    );
+    await app.request.responseInterceptors[0][0]({
+      status: 200,
+      config: { url: '/api/v1/login' },
+      data: { access_token: renewed },
+    });
   },
 );
-check('unauthenticated API 401 redirects to login', () => {
+check('unauthenticated API 401 redirects to login', async () => {
   const env = environment();
   const error = {
     response: { status: 401, config: { url: '/api/v1/app/list' } },
   };
-  assert.throws(() => env.app().request.errorConfig.errorHandler(error, {}));
+  await assert.rejects(env.app().request.responseInterceptors[0][1](error));
   assert.equal(env.history.location.pathname, '/user/login');
 });
 check(
@@ -530,10 +553,13 @@ check(
         initialState: await env.app().getInitialState(),
         setInitialState() {},
       });
-      await layout.logout();
-      assert.equal(env.requests[0].url, '/api/v1/logout');
-      assert.equal(env.requests[0].method, 'POST');
-      assert.equal(env.requests[0].headers.Authorization, bearer);
+      await layout.headerRender({}).props.onLogout();
+      const logoutRequest = env.requests.find(
+        (request) => request.url === '/api/v1/logout',
+      );
+      assert.equal(logoutRequest.url, '/api/v1/logout');
+      assert.equal(logoutRequest.method, 'POST');
+      assert.equal(logoutRequest.headers.Authorization, bearer);
       assert.equal(env.auth.getBearerToken(), '');
       assert.equal(env.history.location.pathname, '/user/login');
       assert.equal(env.notifications.length, failed ? 1 : 0);

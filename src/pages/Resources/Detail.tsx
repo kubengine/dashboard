@@ -4,6 +4,7 @@ import {
   manifest,
   resource_pod,
 } from '@/services/KubernetesController';
+import { usePermissions } from '@/utils/permissions';
 import { getRequestErrorMessage, isSuccessCode } from '@/utils/request';
 import { getRelativeTime } from '@/utils/time';
 import { ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -61,6 +62,7 @@ const ObjectFields: React.FC<{ value: Record<string, any> }> = ({ value }) => (
   />
 );
 const Detail: React.FC = () => {
+  const { can, user } = usePermissions();
   const { type = '', namespace = '', name = '' } = useParams();
   const [params, setParams] = useSearchParams();
   const entry = catalog.find((item) => item.kind === type);
@@ -68,7 +70,16 @@ const Detail: React.FC = () => {
     'overview',
     'yaml',
     'events',
-    ...(type === 'pod' ? ['logs', 'terminal', 'files'] : []),
+    ...(type === 'pod'
+      ? [
+          'logs',
+          ...(can('pod.terminal', namespace) ? ['terminal'] : []),
+          ...(can('pod.files.read', namespace) ||
+          can('pod.files.write', namespace)
+            ? ['files']
+            : []),
+        ]
+      : []),
     ...(relatedKinds.has(type) ? ['pods'] : []),
   ];
   const tab = allowedTabs.includes(params.get('tab') || '')
@@ -77,6 +88,9 @@ const Detail: React.FC = () => {
   const [raw, setRaw] = useState<any>();
   const [yaml, setYaml] = useState('');
   const [reveal, setReveal] = useState(false);
+  useEffect(() => {
+    if (!can('secret.read', namespace)) setReveal(false);
+  }, [user?.revision]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
@@ -116,7 +130,7 @@ const Detail: React.FC = () => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [type, namespace, name, reveal, refresh]);
+  }, [type, namespace, name, reveal, refresh, user?.revision]);
   useEffect(() => {
     if (tab !== 'events') return;
     const controller = new AbortController();
@@ -685,7 +699,10 @@ const Detail: React.FC = () => {
               : 'Secret 值默认隐藏，查看前请确认当前屏幕环境。'
           }
           action={
-            <Button onClick={() => setReveal((value) => !value)}>
+            <Button
+              disabled={!can('secret.read', namespace)}
+              onClick={() => setReveal((value) => !value)}
+            >
               {reveal ? '隐藏 Secret 值' : '显示 Secret 值'}
             </Button>
           }
@@ -712,8 +729,13 @@ const Detail: React.FC = () => {
           ...(type === 'pod'
             ? [
                 { key: 'logs', label: '容器日志' },
-                { key: 'terminal', label: '终端' },
-                { key: 'files', label: '文件管理' },
+                ...(can('pod.terminal', namespace)
+                  ? [{ key: 'terminal', label: '终端' }]
+                  : []),
+                ...(can('pod.files.read', namespace) ||
+                can('pod.files.write', namespace)
+                  ? [{ key: 'files', label: '文件管理' }]
+                  : []),
               ]
             : []),
           { key: 'events', label: '事件' },
