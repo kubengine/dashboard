@@ -1,8 +1,9 @@
 import {
   deployment_operations,
+  deploymentActionLabels,
   DeploymentCurrent,
   DeploymentOperation,
-  OperationCommand,
+  DeploymentPending,
   submit_deployment_operation,
 } from '@/services/DeploymentController';
 import { usePermissions } from '@/utils/permissions';
@@ -25,6 +26,7 @@ import {
 } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import './DeploymentOperations.less';
+import DeploymentReleases from './DeploymentReleases';
 
 const states: Record<string, [string, string]> = {
   pending: ['待执行', 'default'],
@@ -48,10 +50,7 @@ const writes: Record<string, string> = {
   unknown: '写入结果不确定',
 };
 const active = new Set(['pending', 'running', 'timed_out']);
-interface Pending {
-  action: 'scale' | 'restart';
-  body: OperationCommand;
-}
+type Pending = DeploymentPending;
 
 const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
   namespace,
@@ -62,6 +61,7 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
   const [items, setItems] = useState<DeploymentOperation[]>([]);
   const [selected, setSelected] = useState('');
   const [error, setError] = useState('');
+  const [commandError, setCommandError] = useState('');
   const [missing, setMissing] = useState('');
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
@@ -90,6 +90,7 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
     setPending(undefined);
     setModal(undefined);
     setNotice('');
+    setCommandError('');
     setSelected('');
     setWriteDenied(false);
     setSubmitting(submittingRef.current.has(key));
@@ -168,11 +169,12 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
     if (!writable) setModal(undefined);
   }, [writable]);
 
-  const submit = async (request: Pending) => {
-    if (submittingRef.current.has(key)) return;
+  const submit = async (request: Pending): Promise<boolean> => {
+    if (submittingRef.current.has(key)) return false;
     submittingRef.current.add(key);
     setSubmitting(true);
     setError('');
+    setCommandError('');
     const requestKey = key;
     try {
       sessionStorage.setItem(key, JSON.stringify(request));
@@ -183,16 +185,17 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
         request.action,
         request.body,
       );
-      if (targetRef.current !== requestKey) return;
+      if (targetRef.current !== requestKey) return false;
       setSelected(data.operation.id);
       setNotice('操作已受理，正在跟踪集群写入和健康状态。');
       sessionStorage.removeItem(key);
       setPending(undefined);
       setModal(undefined);
       setRefresh((value) => value + 1);
+      return true;
     } catch (e: any) {
-      if (targetRef.current !== requestKey) return;
-      setError(
+      if (targetRef.current !== requestKey) return false;
+      setCommandError(
         getRequestErrorMessage(e, '请求结果待核实，请查看操作记录或核实原请求'),
       );
       const status = e?.status || e?.response?.status || e?.code;
@@ -204,6 +207,7 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
         setWriteDenied(true);
         setModal(undefined);
       }
+      return false;
     } finally {
       submittingRef.current.delete(requestKey);
       if (targetRef.current === requestKey) setSubmitting(false);
@@ -215,6 +219,7 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
     setConfirmZero(false);
     setModal(action);
     setError('');
+    setCommandError('');
   };
   const confirm = () => {
     if (!modal || !snapshot) return;
@@ -252,11 +257,11 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         {loading && <Spin aria-label="正在读取运维状态" />}
-        {error && (
+        {(error || commandError) && (
           <Alert
             type="error"
             showIcon
-            message={error}
+            message={error || commandError}
             action={
               <Button onClick={() => setRefresh((value) => value + 1)}>
                 重新读取
@@ -357,9 +362,26 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
             )}
           </>
         )}
+        <DeploymentReleases
+          namespace={namespace}
+          name={name}
+          current={current}
+          readable={can('resource.read', namespace) && !denied}
+          writable={writable}
+          disabled={!!disabled}
+          submitting={submitting}
+          recoveryPending={!!pending}
+          operationError={commandError}
+          onClearError={() => setCommandError('')}
+          identity={`${key}:${user?.revision}`}
+          onSubmit={submit}
+        />
         {selectedOperation && (
           <div aria-live="polite">
             <Space wrap style={{ marginBottom: 12 }}>
+              <Typography.Text strong>
+                {deploymentActionLabels[selectedOperation.action]}
+              </Typography.Text>
               <Tag color={states[selectedOperation.status]?.[1]}>
                 {states[selectedOperation.status]?.[0] ||
                   selectedOperation.status}
@@ -423,6 +445,15 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
                   label: 'Kubernetes revision',
                   children: selectedOperation.progress.nativeRevision || '—',
                 },
+                ...(selectedOperation.release?.sourceRevision
+                  ? [
+                      {
+                        key: 'source',
+                        label: '回滚来源原生 revision',
+                        children: `${selectedOperation.release.sourceRevision}（ReplicaSet UID：${selectedOperation.release.sourceReplicaSetUid}）`,
+                      },
+                    ]
+                  : []),
                 {
                   key: 'deadline',
                   label: '平台观察截止',
@@ -490,13 +521,13 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
                 <Button
                   type="link"
                   aria-label={`查看${
-                    item.action === 'scale' ? '扩缩容' : '滚动重启'
+                    deploymentActionLabels[item.action]
                   }操作记录，${new Date(item.createdAt).toLocaleString()}`}
                   onClick={() => setSelected(item.id)}
                 >
                   {item.action === 'scale'
                     ? `扩缩容 ${item.beforeReplicas} → ${item.targetReplicas}`
-                    : '滚动重启'}
+                    : deploymentActionLabels[item.action]}
                 </Button>
               ),
             },
@@ -591,7 +622,9 @@ const DeploymentOperations: React.FC<{ namespace: string; name: string }> = ({
           <Typography.Text type="secondary">
             提交后持续观察实际结果。超时只读核实，不会自动重试写入。
           </Typography.Text>
-          {error && <Alert type="error" showIcon message={error} />}
+          {(error || commandError) && (
+            <Alert type="error" showIcon message={error || commandError} />
+          )}
         </Space>
       </Modal>
     </Card>
